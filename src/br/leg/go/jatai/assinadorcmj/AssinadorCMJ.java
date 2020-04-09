@@ -26,6 +26,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.GregorianCalendar;
@@ -64,6 +65,7 @@ import org.w3c.dom.events.MouseEvent;
 
 import com.itextpdf.io.image.ImageData;
 import com.itextpdf.io.image.ImageDataFactory;
+import com.itextpdf.io.source.ByteArrayOutputStream;
 import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfAConformanceLevel;
 import com.itextpdf.kernel.pdf.PdfOutputIntent;
@@ -316,6 +318,96 @@ public class AssinadorCMJ extends JFrame {
 		} else if (rVal == JFileChooser.CANCEL_OPTION) {
 			return;
 		}
+		
+		try {
+			createPDF(nameFile);
+		} catch (Exception e) {
+			jLabelMessage.setText("Não foi possível gerar o arquivo!");
+			e.printStackTrace();
+		}
+	}
+	
+
+	private void createPDF(String outputNameFile) throws Exception {
+
+		if (files.length == 0)
+			return;
+		
+		if (files[0].getAbsolutePath().endsWith(".pdf")) {
+			mergePDF(outputNameFile);
+			return;
+		}
+
+		int max_size = (int) maxSizeFileOutput.getValue();
+		if (max_size == 0) {
+			constructPDF(outputNameFile, 0);
+			return;
+		}
+		
+		final java.util.List<File> ls = Collections.synchronizedList(new ArrayList<File>());
+		
+		long size = 0;
+
+		for (int i = 0; i < files.length; i++) {
+			File ff = new File(files[i].getAbsolutePath());
+			size += ff.length();
+		}
+		
+
+			
+	}
+	private void mergePDF(String outputNameFile) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	private void constructPDF(String outputNameFile, int escala) throws Exception {
+		
+		InputStream inputStream = this.getClass().getResourceAsStream("/sRGB_CS_profile.icm");
+		PdfADocument pdf = new PdfADocument(new PdfWriter(outputNameFile), PdfAConformanceLevel.PDF_A_1B,
+				new PdfOutputIntent("Custom", "", "http://www.color.org", "sRGB IEC61966-2.1", inputStream));
+
+		Document document = new Document(pdf);
+		document.setMargins(0, 0, 0, 0);
+
+		for (int i = 0; i < files.length; i++) {
+
+			BufferedImage buf = getBufferedImageByIndice(i);
+			if (i + 1 < files.length)
+				pdf.addNewPage(buf.getHeight() > buf.getWidth() ? PageSize.A4 : PageSize.A4.rotate());
+
+			//String path = files[i].getAbsolutePath() + (escala == 0 ? "" : ".jpg");
+
+			ByteArrayOutputStream baos = new ByteArrayOutputStream();
+			ImageIO.write( buf, "jpg", baos );
+			baos.flush();
+			byte[] imageInByte = baos.toByteArray();
+			baos.close();
+			
+			ImageData imageData = ImageDataFactory.create(imageInByte);
+			com.itextpdf.layout.element.Image pdfImg = new com.itextpdf.layout.element.Image(imageData);
+
+			if (buf.getHeight() > buf.getWidth())
+				pdfImg.scaleAbsolute(595, 842);	
+			else 
+				pdfImg.scaleAbsolute(842, 595);
+			
+			document.add(pdfImg);
+
+			if (escala != 0) {
+				File fdel = new File(files[i].getAbsolutePath() + ".jpg");
+				fdel.delete();
+			}
+
+		}
+		document.close();
+		pdf.close();
+
+		jLabelMessage.setText("Arquivo Gerado com sucesso!");
+
+	}
+
+	private void createPDFOld(String nameFile) {
 		int escala = 2500;
 		int min_escala = 1300;
 		float quality = 0.8f;
@@ -324,8 +416,9 @@ public class AssinadorCMJ extends JFrame {
 		float c = 1f;
 		float taxa = 0.07f;
 		int max_size = 9000000;
-
+		
 		final java.util.List<File> ls = Collections.synchronizedList(new ArrayList<File>());
+
 
 		long size = 0;
 
