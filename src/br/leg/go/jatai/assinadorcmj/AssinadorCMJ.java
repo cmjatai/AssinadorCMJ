@@ -50,8 +50,10 @@ import javax.swing.JList;
 import javax.swing.JPanel;
 import javax.swing.JScrollPane;
 import javax.swing.JSpinner;
+import javax.swing.JSpinner.DefaultEditor;
 import javax.swing.ListModel;
 import javax.swing.ListSelectionModel;
+import javax.swing.SpinnerNumberModel;
 import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
@@ -69,6 +71,8 @@ import com.itextpdf.io.source.ByteArrayOutputStream;
 import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfAConformanceLevel;
 import com.itextpdf.kernel.pdf.PdfOutputIntent;
+import com.itextpdf.kernel.pdf.PdfPage;
+import com.itextpdf.kernel.pdf.PdfReader;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
 import com.itextpdf.pdfa.PdfADocument;
@@ -94,7 +98,8 @@ public class AssinadorCMJ extends JFrame {
 	private JButton btnCreatePDF = null;
 
 	private JLabel jLabelMessage = null;
-	private JLabel jLabelBackground = null;
+	private JLabel labelMax1 = null;
+	private JLabel labelMax2 = null;
 
 	private JScrollPane panelListFiles = null;
 	private JList<String> listFiles = null;
@@ -105,7 +110,7 @@ public class AssinadorCMJ extends JFrame {
 	private File files[] = null;
 	private int rotates[] = null;
 	private BufferedImage[] images = null;
-	
+
 	private int rotate[] = {0, 90, 180, -90};
 
 	public static void showMessage(String info, String title, int tipo) {
@@ -184,7 +189,7 @@ public class AssinadorCMJ extends JFrame {
 
 		});
 		this.addWindowStateListener(new WindowStateListener() {
-			
+
 			@Override
 			public void windowStateChanged(WindowEvent e) {
 				listenerResize(e);
@@ -199,11 +204,11 @@ public class AssinadorCMJ extends JFrame {
 
 		if (e instanceof WindowEvent) 
 			listFiles.setSize(220, pData.getHeight() - 75);
-		
+
 		panelImage.setSize(pData.getWidth() - panelImage.getLocation().x - 10,
-		pData.getHeight() - panelImage.getLocation().y - 40);
+				pData.getHeight() - panelImage.getLocation().y - 40);
 	}
-	
+
 	protected void onWindowOpened() {
 		setTitle("Assinador CMJ");
 		Toolkit tk = Toolkit.getDefaultToolkit();
@@ -255,7 +260,7 @@ public class AssinadorCMJ extends JFrame {
 
 			panelImage.setBackground(Color.WHITE);
 			panelImage.setBorder(BorderFactory.createEtchedBorder());
-			
+
 
 			panelImage.addComponentListener(new ComponentAdapter() {
 				public void componentResized(ComponentEvent e) {
@@ -265,7 +270,7 @@ public class AssinadorCMJ extends JFrame {
 		}
 		return panelImage;
 	}
-	
+
 	private JButton getButtonCreatePDF() {
 
 		btnCreatePDF = new JButton();
@@ -318,7 +323,7 @@ public class AssinadorCMJ extends JFrame {
 		} else if (rVal == JFileChooser.CANCEL_OPTION) {
 			return;
 		}
-		
+
 		try {
 			createPDF(nameFile);
 		} catch (Exception e) {
@@ -326,13 +331,13 @@ public class AssinadorCMJ extends JFrame {
 			e.printStackTrace();
 		}
 	}
-	
+
 
 	private void createPDF(String outputNameFile) throws Exception {
 
 		if (files.length == 0)
 			return;
-		
+
 		if (files[0].getAbsolutePath().endsWith(".pdf")) {
 			mergePDF(outputNameFile);
 			return;
@@ -343,26 +348,25 @@ public class AssinadorCMJ extends JFrame {
 			constructPDF(outputNameFile, 0);
 			return;
 		}
-		
+
 		final java.util.List<File> ls = Collections.synchronizedList(new ArrayList<File>());
-		
+
 		long size = 0;
 
 		for (int i = 0; i < files.length; i++) {
 			File ff = new File(files[i].getAbsolutePath());
 			size += ff.length();
-		}
-		
+		}		
 
-			
+
 	}
 	private void mergePDF(String outputNameFile) {
 		// TODO Auto-generated method stub
-		
+
 	}
 
 	private void constructPDF(String outputNameFile, int escala) throws Exception {
-		
+
 		InputStream inputStream = this.getClass().getResourceAsStream("/sRGB_CS_profile.icm");
 		PdfADocument pdf = new PdfADocument(new PdfWriter(outputNameFile), PdfAConformanceLevel.PDF_A_1B,
 				new PdfOutputIntent("Custom", "", "http://www.color.org", "sRGB IEC61966-2.1", inputStream));
@@ -383,7 +387,7 @@ public class AssinadorCMJ extends JFrame {
 			baos.flush();
 			byte[] imageInByte = baos.toByteArray();
 			baos.close();
-			
+
 			ImageData imageData = ImageDataFactory.create(imageInByte);
 			com.itextpdf.layout.element.Image pdfImg = new com.itextpdf.layout.element.Image(imageData);
 
@@ -391,12 +395,13 @@ public class AssinadorCMJ extends JFrame {
 				pdfImg.scaleAbsolute(595, 842);	
 			else 
 				pdfImg.scaleAbsolute(842, 595);
-			
+
 			document.add(pdfImg);
 
 			if (escala != 0) {
 				File fdel = new File(files[i].getAbsolutePath() + ".jpg");
-				fdel.delete();
+				if (fdel.exists())
+					fdel.delete();
 			}
 
 		}
@@ -416,7 +421,7 @@ public class AssinadorCMJ extends JFrame {
 		float c = 1f;
 		float taxa = 0.07f;
 		int max_size = 9000000;
-		
+
 		final java.util.List<File> ls = Collections.synchronizedList(new ArrayList<File>());
 
 
@@ -530,7 +535,7 @@ public class AssinadorCMJ extends JFrame {
 						size += ff.length();
 					}
 					System.out.println("=======size:" + String.valueOf(size) + " escala:" + String.valueOf(escala)
-							+ "quality:" + String.valueOf(quality));
+					+ "quality:" + String.valueOf(quality));
 					if (size > max_size) {
 						for (int i = 0; i < files.length; i++) {
 							File fdel = new File(files[i].getAbsolutePath() + ".jpg");
@@ -632,20 +637,23 @@ public class AssinadorCMJ extends JFrame {
 
 		maxSizeFileOutput.setLocation(485, 30);
 		maxSizeFileOutput.setSize(100, 22);
+		DefaultEditor edit = (DefaultEditor) maxSizeFileOutput.getEditor();
+		edit.getTextField().setEditable(false);
+		maxSizeFileOutput.setModel(new SpinnerNumberModel(0, 0, 0, 0));
 
-		JLabel label = new JLabel("Limitar tamanho do PDF em MB");
-		label.setFont(new Font("Dialog", Font.BOLD, 11));
+		labelMax1 = new JLabel("TODO: Limitar tamanho do PDF em MB");
+		labelMax1.setFont(new Font("Dialog", Font.BOLD, 11));
+		labelMax1.setLocation(590, 23);		
+		labelMax1.setSize(400, 22);
+		pData.add(labelMax1, null);
 
-		pData.add(label, null);
-		label.setLocation(590, 23);		
-		label.setSize(400, 22);
-		
-		label = new JLabel("(deixe zero para sem limite de tamanho)");
-		label.setFont(new Font("Dialog", Font.ITALIC, 11));
-		pData.add(label, null);
-		label.setLocation(590, 35);		
-		label.setSize(400, 22);		
-		
+
+		labelMax2 = new JLabel("(deixe zero para sem limite de tamanho)");
+		labelMax2.setFont(new Font("Dialog", Font.ITALIC, 11));
+		labelMax2.setLocation(590, 35);		
+		labelMax2.setSize(400, 22);		
+		pData.add(labelMax2, null);
+
 		return maxSizeFileOutput;
 
 	}
@@ -685,23 +693,41 @@ public class AssinadorCMJ extends JFrame {
 			panelImage.removeAll();
 
 			BufferedImage ii = getBufferedImageByIndice(_idxFilesSelecteds[0]);
-		
+
+			Graphics2D g = (Graphics2D) panelImage.getGraphics();
+			g.setColor(new Color(200, 200, 200));
+			g.fillRect(1, 1, panelImage.getWidth() - 3 , panelImage.getHeight() - 2);
+			if (ii == null) {
+
+				btnGirarImagem.setVisible(false);
+				maxSizeFileOutput.setVisible(false);
+				labelMax1.setVisible(false);
+				labelMax2.setVisible(false);
+				
+				return;
+			}
+
+			btnGirarImagem.setVisible(true);
+			maxSizeFileOutput.setVisible(true);
+			labelMax1.setVisible(true);
+			labelMax2.setVisible(true);
+
 			double wi = ii.getWidth();
 			double hi = ii.getHeight();
-			
+
 			int w = ii.getWidth();
 			int h = ii.getHeight();
-			
+
 			double wp = 0; 
 			double hp = 0; 
-			
+
 			wp = panelImage.getWidth();
 			hp = panelImage.getHeight();	
-			
+
 			double space = 11;
 			int drawLocationX = 0;
 			int drawLocationY = 0;
-			
+
 			//image paixagem
 			if (wi > hi) {
 				//tela paixagem
@@ -717,14 +743,14 @@ public class AssinadorCMJ extends JFrame {
 						drawLocationX = (int) (space / 2);
 						drawLocationY = (panelImage.getHeight() - h) / 2;
 					}
-				//tela retrato
+					//tela retrato
 				} else {
 					w = (int) (wp - space);
 					h = (int)(w * ((double)(hi) / wi));
 					drawLocationX = (int) (space / 2);
 					drawLocationY = (panelImage.getHeight() - h) / 2;
 				} 
-			//imagem retrato
+				//imagem retrato
 			} else {
 				//tela paixagem
 				if (wp > hp) {
@@ -732,7 +758,7 @@ public class AssinadorCMJ extends JFrame {
 					w = (int)(h * ((double)(wi) / hi)) ;
 					drawLocationX = (panelImage.getWidth() - w) / 2;
 					drawLocationY = (int) (space / 2);
-				//tela retrato
+					//tela retrato
 				} else {
 					// razão da tela é maior que da imagem
 					if (hp/wp > hi/wi) {
@@ -749,23 +775,19 @@ public class AssinadorCMJ extends JFrame {
 					}
 				} 
 			}
-			
-			Graphics2D g = (Graphics2D) panelImage.getGraphics();
-			g.setColor(new Color(200, 200, 200));
-			g.fillRect(1, 1, panelImage.getWidth() - 3 , panelImage.getHeight() - 2);
-			
+
 			g.drawImage(ii, drawLocationX, drawLocationY, w, h ,null);
 		}
 	}
-	
-	
+
+
 
 	private JButton getButtonSelectFile() {
 
 		btnSelectFile = new JButton();
 		btnSelectFile.setForeground(new Color(0, 0, 0));
 		btnSelectFile.setFont(new Font("Dialog", Font.PLAIN, 12));
-		btnSelectFile.setText("Selecione as Imagens");
+		btnSelectFile.setText("Selecione JPGs ou PDFs");
 
 		btnSelectFile.setLocation(7, 7);
 		btnSelectFile.setSize(220, 20);
@@ -804,7 +826,7 @@ public class AssinadorCMJ extends JFrame {
 
 		return btnGirarImagem;
 	}
-	
+
 	protected BufferedImage getBufferedImageByIndice(int i) {
 		BufferedImage src = images[i];
 		if (src == null) {
@@ -827,42 +849,47 @@ public class AssinadorCMJ extends JFrame {
 		for (int i: _idxFilesSelecteds) {
 			images[i] = null;
 			BufferedImage src = getBufferedImageByIndice(i);
+
+			if (src == null) {
+
+			}
+
 			rotates[i] = (rotates[i] + 1) % 4;
-			
-		    int width = 0;
-		    int height = 0;
 
-		    BufferedImage dest = null;
+			int width = 0;
+			int height = 0;
 
-		    if (rotates[i] == 1 || rotates[i] == 3) {
-		    	height = src.getWidth();
-			    width = src.getHeight();
-		    } else {
-		    	width = src.getWidth();
-		    	height = src.getHeight();
-		    }
-		    dest = new BufferedImage(width, height, src.getType());
-		    
-		    Graphics2D graphics2D = dest.createGraphics();
-		    RenderingHints rh = new RenderingHints(
-		    		RenderingHints.KEY_RENDERING,
-		    		RenderingHints.VALUE_RENDER_QUALITY);
-		    graphics2D.setRenderingHints(rh);
-		    
-		    if (rotates[i] == 1 || rotates[i]==3) {
+			BufferedImage dest = null;
+
+			if (rotates[i] == 1 || rotates[i] == 3) {
+				height = src.getWidth();
+				width = src.getHeight();
+			} else {
+				width = src.getWidth();
+				height = src.getHeight();
+			}
+			dest = new BufferedImage(width, height, src.getType());
+
+			Graphics2D graphics2D = dest.createGraphics();
+			RenderingHints rh = new RenderingHints(
+					RenderingHints.KEY_RENDERING,
+					RenderingHints.VALUE_RENDER_QUALITY);
+			graphics2D.setRenderingHints(rh);
+
+			if (rotates[i] == 1 || rotates[i]==3) {
 				graphics2D.translate(rotates[i] == 1 ? width : 0, rotates[i] == 3 ? height : 0);
-			    width = 0;
-			    height = 0;
-		    }
-		    graphics2D.rotate(Math.toRadians(rotate[rotates[i]]), width / 2, height / 2);	
-		    
-		    
-		    graphics2D.drawRenderedImage(src, null);
-		    graphics2D.dispose();
-		    images[i] = dest;
+				width = 0;
+				height = 0;
+			}
+			graphics2D.rotate(Math.toRadians(rotate[rotates[i]]), width / 2, height / 2);	
+
+
+			graphics2D.drawRenderedImage(src, null);
+			graphics2D.dispose();
+			images[i] = dest;
 		}
 		renderImageSelected();
-		
+
 	}
 
 	protected void actionBtnSelectFile() {
@@ -888,15 +915,19 @@ public class AssinadorCMJ extends JFrame {
 
 			files = c.getSelectedFiles();
 			rotates = new int[files.length];
-			
-		    images = new BufferedImage[files.length];		    
-		    
-		    for (int i = 0; i < files.length; i++) {
-	    		images[i] = null;
-	    		rotates[i] = 0;
-	    		//images[i] = ImageIO.read(files[i]);
-	    	}
-			 
+
+			images = new BufferedImage[files.length];		    
+
+			btnGirarImagem.setVisible(true);
+			maxSizeFileOutput.setVisible(true);
+			labelMax1.setVisible(true);
+			labelMax2.setVisible(true);
+			for (int i = 0; i < files.length; i++) {
+				images[i] = null;
+				rotates[i] = 0;
+				//images[i] = ImageIO.read(files[i]);
+			}
+
 			updateListFiles();
 
 		}
@@ -947,38 +978,38 @@ public class AssinadorCMJ extends JFrame {
 			 * });
 			 */		} else {
 
-			pData.remove(panelListFiles);
-			pData.add(getJPanelListFiles());
+				 pData.remove(panelListFiles);
+				 pData.add(getJPanelListFiles());
 
-			listFiles.setModel(new ListModel<String>() {
+				 listFiles.setModel(new ListModel<String>() {
 
-				@Override
-				public void removeListDataListener(ListDataListener arg0) {
-					// TODO Auto-generated method stub
+					 @Override
+					 public void removeListDataListener(ListDataListener arg0) {
+						 // TODO Auto-generated method stub
 
-				}
+					 }
 
-				@Override
-				public int getSize() {
-					// TODO Auto-generated method stub
-					if (files == null) {
-						return 0;
-					}
-					return files.length;
-				}
+					 @Override
+					 public int getSize() {
+						 // TODO Auto-generated method stub
+						 if (files == null) {
+							 return 0;
+						 }
+						 return files.length;
+					 }
 
-				@Override
-				public String getElementAt(int arg0) {
-					return files[arg0].getName();
-				}
+					 @Override
+					 public String getElementAt(int arg0) {
+						 return files[arg0].getName();
+					 }
 
-				@Override
-				public void addListDataListener(ListDataListener arg0) {
-					// TODO Auto-generated method stub
+					 @Override
+					 public void addListDataListener(ListDataListener arg0) {
+						 // TODO Auto-generated method stub
 
-				}
-			});
-		}
+					 }
+				 });
+			 }
 	}
 
 	private JLabel getLabelMessage() {
