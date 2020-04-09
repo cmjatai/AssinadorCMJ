@@ -95,7 +95,7 @@ public class AssinadorCMJ extends JFrame {
 	private JLabel jLabelBackground = null;
 
 	private JScrollPane panelListFiles = null;
-	private JList<BufferedImage> listFiles = null;
+	private JList<String> listFiles = null;
 	private JCheckBox chkImageList = null;
 	private JSpinner maxSizeFileOutput = null;
 	private JPanel panelImage = null;
@@ -105,6 +105,115 @@ public class AssinadorCMJ extends JFrame {
 	private BufferedImage[] images = null;
 	
 	private int rotate[] = {0, 90, 180, -90};
+
+	public static void showMessage(String info, String title, int tipo) {
+		javax.swing.JDialog f = new javax.swing.JDialog();
+		f.setSize(220, 150);
+		javax.swing.JOptionPane.showMessageDialog(f, info, title, tipo);
+	}
+
+	/**
+	 * @param args
+	 */
+	public static void main(String[] args) {
+
+		SwingUtilities.invokeLater(new Runnable() {
+			public void run() {
+				AssinadorCMJ thisClass = new AssinadorCMJ();
+				thisClass.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+				thisClass.setVisible(true);
+				AssinadorCMJ.leftTop(thisClass);
+			}
+		});
+	}
+
+	public static void center(Component componente) {
+		Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
+		Rectangle r = componente.getBounds();
+		int widthSplash = r.width;
+		int heightSplash = r.height;
+		int posX = (screen.width / 2) - (widthSplash / 2);
+		int posY = (screen.height / 2) - (heightSplash / 2);
+
+		componente.setBounds(posX, posY, widthSplash, heightSplash);
+	}
+
+	public static void leftTop(Component componente) {
+		// Centraliza a janela de abertura no centro do desktop.
+		Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
+		Rectangle r = componente.getBounds();
+		int widthSplash = r.width;
+		int heightSplash = r.height;
+
+		int posX = 100;
+		int posY = 100;
+
+		componente.setBounds(posX, posY, widthSplash, heightSplash);
+	}
+
+	public AssinadorCMJ() {
+		super();
+		initialize();
+	}
+
+	private void initialize() {
+
+		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+		jContentPane = new JPanel();
+		jContentPane.setLayout(null);
+		jContentPane.setOpaque(false);
+		jContentPane.add(getFrm(), null);
+
+		this.setContentPane(jContentPane);
+
+		this.setTitle("JFrame");
+
+		this.addWindowListener(new java.awt.event.WindowAdapter() {
+			public void windowOpened(java.awt.event.WindowEvent e) {
+				onWindowOpened();
+			}
+		});
+
+		this.addComponentListener(new ComponentAdapter() {
+			public void componentResized(ComponentEvent e) {
+				listenerResize(e);
+			}
+
+		});
+		this.addWindowStateListener(new WindowStateListener() {
+			
+			@Override
+			public void windowStateChanged(WindowEvent e) {
+				listenerResize(e);
+			}
+		});
+	}
+
+	private void listenerResize(ComponentEvent e) {
+		pData.setBounds(new Rectangle(2, 2, e.getComponent().getWidth(), e.getComponent().getHeight()));
+		chkImageList.setLocation(5, pData.getHeight() - 70);
+		panelListFiles.setSize(220, pData.getHeight() - 75);
+
+		if (e instanceof WindowEvent) 
+			listFiles.setSize(220, pData.getHeight() - 75);
+		
+		panelImage.setSize(pData.getWidth() - panelImage.getLocation().x - 10,
+		pData.getHeight() - panelImage.getLocation().y - 40);
+	}
+	
+	protected void onWindowOpened() {
+		setTitle("Assinador CMJ");
+		Toolkit tk = Toolkit.getDefaultToolkit();
+		Dimension d = tk.getScreenSize();
+
+		setPreferredSize(new Dimension(screenWidth, screenHeight));
+		setSize(new Dimension(screenWidth, screenHeight));
+
+		pData.setPreferredSize(
+				new Dimension((int) (getPreferredSize().width - 5), (int) (getPreferredSize().height - 5)));
+		pData.setSize(new Dimension((int) (getPreferredSize().width - 5), (int) (getPreferredSize().height - 5)));
+	}
 
 	private JPanel getFrm() {
 		if (pData == null) {
@@ -121,9 +230,6 @@ public class AssinadorCMJ extends JFrame {
 
 			pData.add(getButtonGirarImagemSelecionada(), null);
 			pData.add(getJPanelListFiles(), null);
-			
-			
-			
 
 		}
 		return pData;
@@ -152,15 +258,11 @@ public class AssinadorCMJ extends JFrame {
 			panelImage.addComponentListener(new ComponentAdapter() {
 				public void componentResized(ComponentEvent e) {
 					renderImageSelected();
-
 				}
 			});
-
 		}
 		return panelImage;
 	}
-
-	
 	
 	private JButton getButtonCreatePDF() {
 
@@ -177,26 +279,7 @@ public class AssinadorCMJ extends JFrame {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				/*
-				 * try {
-				 * 
-				 * Manager.setHint(Manager.LIGHTWEIGHT_RENDERER, true); player =
-				 * Manager.createRealizedPlayer(new
-				 * File("/home/leandro/__img/z001.mp3").toURL());
-				 * 
-				 * } catch (NoPlayerException e1) { // TODO Auto-generated catch block
-				 * e1.printStackTrace(); } catch (CannotRealizeException e1) { // TODO
-				 * Auto-generated catch block e1.printStackTrace(); } catch
-				 * (MalformedURLException e1) { // TODO Auto-generated catch block
-				 * e1.printStackTrace(); } catch (IOException e1) { // TODO Auto-generated catch
-				 * block e1.printStackTrace(); } //Component video =
-				 * player.getVisualComponent(); Component controle =
-				 * player.getControlPanelComponent() ;
-				 * panelImage.add(controle,BorderLayout.SOUTH); repaint(); player.start();
-				 */
-
 				actionBtnCreatePDF();
-
 			}
 		});
 
@@ -213,107 +296,6 @@ public class AssinadorCMJ extends JFrame {
 		image.getResizedToWidth(escala).soften(0.08f).writeToJPG(new File(newFile), quality);
 
 		return 0;
-	}
-
-	public static long midiaToEscalaOld1(String midia, int escala, float quality) throws IOException {
-
-		java.awt.Image img = new ImageIcon(midia).getImage();
-		String tempFile = midia + "_temp.jpg";
-		String newFile = midia + ".jpg";
-
-		int w, h, ww;
-		// Escala Percentual5
-		// w = (int)(img.getWidth(null) * (float)(escala/100.0));
-		// h = (int)(img.getHeight(null) * (float)(escala/100.0));
-
-		w = img.getWidth(null);
-		h = img.getHeight(null);
-
-		if (escala != 0) {
-			if (h > w) {
-
-				if (w > escala) {
-					// Escala Referencia Vertical
-					w = escala;
-					h = (int) (escala * img.getHeight(null)) / img.getWidth(null);
-
-					ww = w;
-					w = (int) (ww * ((float) w / (float) h));
-					h = ww;
-				} else
-					escala = 0;
-
-			} else {
-				if (h > escala) {
-					// Escala Referencia Horizontal
-					h = escala;
-					w = (int) (escala * img.getWidth(null)) / img.getHeight(null);
-				} else
-					escala = 0;
-
-			}
-		}
-
-		if (escala > 0) {
-
-			BufferedImage bImg = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
-
-			Graphics2D g = bImg.createGraphics();
-
-			g.setComposite(AlphaComposite.Src);
-			g.addRenderingHints(
-					new RenderingHints(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BICUBIC));
-			g.addRenderingHints(new RenderingHints(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY));
-			g.addRenderingHints(new RenderingHints(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON));
-			g.drawImage(img, 0, 0, w, h, null);
-			g.dispose();
-			FileOutputStream out = new FileOutputStream(tempFile);
-
-			ImageIO.write(bImg, "JPG", out);
-			bImg.flush();
-		}
-
-		Iterator<ImageWriter> iter = ImageIO.getImageWritersByFormatName("jpeg");
-		ImageWriter writer = iter.next();
-		ImageWriteParam iwp = writer.getDefaultWriteParam();
-		iwp.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-		FileImageOutputStream output;
-		IIOImage image;
-		iwp.setCompressionQuality(quality);
-		File fOut = new File(newFile);
-		output = new FileImageOutputStream(fOut);
-		writer.setOutput(output);
-		image = new IIOImage(ImageIO.read(new File(escala == 0 ? midia : tempFile)), null, null);
-		writer.write(null, image, iwp);
-		writer.reset();
-		output.flush();
-		output.close();
-
-		File fd = new File(tempFile);
-		fd.delete();
-
-		System.gc();
-		return fOut.length();
-
-	}
-
-	public static void compress(String path, float quality) throws FileNotFoundException, IOException {
-
-		Iterator<ImageWriter> iter = ImageIO.getImageWritersByFormatName("jpeg");
-		ImageWriter writer = iter.next();
-		ImageWriteParam iwp = writer.getDefaultWriteParam();
-		iwp.setCompressionMode(ImageWriteParam.MODE_EXPLICIT);
-		FileImageOutputStream output;
-		IIOImage image;
-		iwp.setCompressionQuality(quality);
-		output = new FileImageOutputStream(new File(path + ".jpg"));
-		writer.setOutput(output);
-		image = new IIOImage(ImageIO.read(new File(path)), null, null);
-		writer.write(null, image, iwp);
-		writer.reset();
-		output.flush();
-		output.close();
-
 	}
 
 	protected void actionBtnCreatePDF() {
@@ -592,27 +574,13 @@ public class AssinadorCMJ extends JFrame {
 
 		listFiles = new JList();
 		listFiles.setSize(220, pData.getHeight() - 75);
-
 		listFiles.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
-
 		listFiles.addListSelectionListener(new ListSelectionListener() {
-
 			@Override
 			public void valueChanged(ListSelectionEvent arg0) {
-
 				renderImageSelected();
-
 			}
 		});
-
-		MouseListener ma = new MouseAdapter() {
-
-			public void mouseClicked(final MouseEvent e) {
-
-			}
-		};
-
-		listFiles.addMouseListener(ma);
 
 		return listFiles;
 	}
@@ -641,14 +609,6 @@ public class AssinadorCMJ extends JFrame {
 			int drawLocationX = 0;
 			int drawLocationY = 0;
 			
-			/*
-			drawLocationX = (int) (space / 2);
-			drawLocationY = (panelImage.getHeight() - h) / 2;
-			
-			drawLocationX = (panelImage.getWidth() - w) / 2;
-			drawLocationY = (int) (space / 2);
-			*/
-			
 			//image paixagem
 			if (wi > hi) {
 				//tela paixagem
@@ -666,18 +626,10 @@ public class AssinadorCMJ extends JFrame {
 					}
 				//tela retrato
 				} else {
-					// razão da tela é maior que da imagem
-					if (hp/wp > wi/hi) {
-						w = (int) (wp - space);
-						h = (int)(w * ((double)(hi) / wi));
-						drawLocationX = (int) (space / 2);
-						drawLocationY = (panelImage.getHeight() - h) / 2;
-					} else {
-						w = (int) (wp - space);
-						h = (int)(w * ((double)(hi) / wi));
-						drawLocationX = (int) (space / 2);
-						drawLocationY = (panelImage.getHeight() - h) / 2;
-					}
+					w = (int) (wp - space);
+					h = (int)(w * ((double)(hi) / wi));
+					drawLocationX = (int) (space / 2);
+					drawLocationY = (panelImage.getHeight() - h) / 2;
 				} 
 			//imagem retrato
 			} else {
@@ -698,27 +650,18 @@ public class AssinadorCMJ extends JFrame {
 					} else {
 						h = (int) (hp - space);
 						w = (int)(h * ((double)(wi) / hi)) ;
-						
 
 						drawLocationX = (panelImage.getWidth() - w) / 2;
 						drawLocationY = (int) (space / 2);
 					}
 				} 
 			}
-
-			
 			
 			Graphics2D g = (Graphics2D) panelImage.getGraphics();
 			g.setColor(new Color(200, 200, 200));
 			g.fillRect(1, 1, panelImage.getWidth() - 3 , panelImage.getHeight() - 2);
 			
-				
-				
-				
-			
 			g.drawImage(ii, drawLocationX, drawLocationY, w, h ,null);
-			
-									
 		}
 	}
 	
@@ -788,13 +731,11 @@ public class AssinadorCMJ extends JFrame {
 
 		int[] _idxFilesSelecteds = listFiles.getSelectedIndices();
 
-		
 		for (int i: _idxFilesSelecteds) {
 			images[i] = null;
 			BufferedImage src = getBufferedImageByIndice(i);
 			rotates[i] = (rotates[i] + 1) % 4;
 			
-
 		    int width = 0;
 		    int height = 0;
 
@@ -878,59 +819,45 @@ public class AssinadorCMJ extends JFrame {
 			pData.remove(panelListFiles);
 			pData.add(getJPanelListFiles());
 
-			listFiles.setListData(images);
-			listFiles.setCellRenderer(new DefaultListCellRenderer() {
-
-				public Component getListCellRendererComponent(JList list, Object value, int index, boolean isSelected,
-						boolean cellHasFocus) {
-					// for default cell renderer behavior
-					Component c = super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-					// set icon for cell image
-
-					BufferedImage bImg = (BufferedImage) value;
-
-					java.awt.Image img = new ImageIcon(bImg).getImage();
-					int w = img.getWidth(null);
-					int h = img.getHeight(null);
-					int ww = 0;
-					int escala = 200;
-
-					if (h > w) {
-						// Escala Referencia Vertical
-						w = escala;
-						h = (int) (escala * img.getHeight(null)) / img.getWidth(null);
-						// ww = w;
-						// w = (int)(ww * ((float)w / (float)h));
-						// h = ww;
-					} else {
-						// Escala Referencia paisagem
-						w = escala;
-						h = (int) ((escala * img.getHeight(null)) / img.getWidth(null));
-						// h = escala;
-						// w = (int) (escala * img.getWidth(null)) /
-						// img.getHeight(null);
-					}
-
-					bImg = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
-
-					Graphics2D g = bImg.createGraphics();
-					g.drawImage(img, 0, 0, w, h, null);
-
-					((JLabel) c).setIcon(new ImageIcon(bImg));
-
-					// ((JLabel)c).setIcon(new ImageIcon((BufferedImage)value));
-
-					((JLabel) c).setText(null);
-					return c;
-				}
-
-			});
-		} else {
+			/*
+			 * listFiles.setListData(files); listFiles.setCellRenderer(new
+			 * DefaultListCellRenderer() {
+			 * 
+			 * public Component getListCellRendererComponent(JList list, Object value, int
+			 * index, boolean isSelected, boolean cellHasFocus) { // for default cell
+			 * renderer behavior Component c = super.getListCellRendererComponent(list,
+			 * value, index, isSelected, cellHasFocus); // set icon for cell image
+			 * 
+			 * BufferedImage bImg = (BufferedImage) value;
+			 * 
+			 * java.awt.Image img = new ImageIcon(bImg).getImage(); int w =
+			 * img.getWidth(null); int h = img.getHeight(null); int ww = 0; int escala =
+			 * 200;
+			 * 
+			 * if (h > w) { // Escala Referencia Vertical w = escala; h = (int) (escala *
+			 * img.getHeight(null)) / img.getWidth(null); // ww = w; // w = (int)(ww *
+			 * ((float)w / (float)h)); // h = ww; } else { // Escala Referencia paisagem w =
+			 * escala; h = (int) ((escala * img.getHeight(null)) / img.getWidth(null)); // h
+			 * = escala; // w = (int) (escala * img.getWidth(null)) / //
+			 * img.getHeight(null); }
+			 * 
+			 * bImg = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+			 * 
+			 * Graphics2D g = bImg.createGraphics(); g.drawImage(img, 0, 0, w, h, null);
+			 * 
+			 * ((JLabel) c).setIcon(new ImageIcon(bImg));
+			 * 
+			 * // ((JLabel)c).setIcon(new ImageIcon((BufferedImage)value));
+			 * 
+			 * ((JLabel) c).setText(null); return c; }
+			 * 
+			 * });
+			 */		} else {
 
 			pData.remove(panelListFiles);
 			pData.add(getJPanelListFiles());
 
-			listFiles.setModel(new ListModel() {
+			listFiles.setModel(new ListModel<String>() {
 
 				@Override
 				public void removeListDataListener(ListDataListener arg0) {
@@ -948,7 +875,7 @@ public class AssinadorCMJ extends JFrame {
 				}
 
 				@Override
-				public Object getElementAt(int arg0) {
+				public String getElementAt(int arg0) {
 					return files[arg0].getName();
 				}
 
@@ -959,158 +886,13 @@ public class AssinadorCMJ extends JFrame {
 				}
 			});
 		}
-
 	}
 
-	/*
-	 * private JLabel getLabelBackGround() {
-	 * 
-	 * jLabelBackground = new JLabel(); jLabelBackground.setForeground(new
-	 * Color(230, 230, 230)); jLabelBackground.setFont(new Font("Dialog", Font.BOLD,
-	 * 100)); jLabelBackground.setText("Image To Pdf");
-	 * jLabelBackground.setLayout(null);
-	 * 
-	 * jLabelBackground.setHorizontalTextPosition(SwingConstants.CENTER);
-	 * jLabelBackground.setHorizontalAlignment(SwingConstants.CENTER);
-	 * 
-	 * return jLabelBackground;
-	 * 
-	 * }
-	 */
 	private JLabel getLabelMessage() {
-
 		jLabelMessage = new JLabel();
 		jLabelMessage.setFont(new Font("Dialog", Font.BOLD, 14));
 		jLabelMessage.setLocation(374, 0);
 		jLabelMessage.setSize(400, 30);
-
 		return jLabelMessage;
-
-	}
-
-	private void initialize() {
-
-		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-		jContentPane = new JPanel();
-		jContentPane.setLayout(null);
-		jContentPane.setOpaque(false);
-		jContentPane.add(getFrm(), null);
-
-		this.setContentPane(jContentPane);
-
-		this.setTitle("JFrame");
-
-		this.addWindowListener(new java.awt.event.WindowAdapter() {
-			public void windowOpened(java.awt.event.WindowEvent e) {
-				onWindowOpened();
-			}
-		});
-
-		this.addComponentListener(new ComponentAdapter() {
-			public void componentResized(ComponentEvent e) {
-				pData.setBounds(new Rectangle(2, 2, e.getComponent().getWidth(), e.getComponent().getHeight()));
-				chkImageList.setLocation(5, pData.getHeight() - 70);
-				panelListFiles.setSize(220, pData.getHeight() - 75);
-
-				panelImage.setSize(pData.getWidth() - panelImage.getLocation().x - 10,
-				pData.getHeight() - panelImage.getLocation().y - 40);
-				// jLabelBackground.setSize(pData.getSize());
-
-			}
-		});
-		this.addWindowStateListener(new WindowStateListener() {
-			
-			@Override
-			public void windowStateChanged(WindowEvent e) {
-				pData.setBounds(new Rectangle(2, 2, e.getComponent().getWidth(), e.getComponent().getHeight()));
-				chkImageList.setLocation(5, pData.getHeight() - 70);
-				panelListFiles.setSize(220, pData.getHeight() - 75);
-				listFiles.setSize(220, pData.getHeight() - 75);
-
-
-				panelImage.setSize(pData.getWidth() - panelImage.getLocation().x - 10,
-				pData.getHeight() - panelImage.getLocation().y - 40);
-				// jLabelBackground.setSize(pData.getSize());
-				
-			}
-		});
-	}
-
-	protected void onWindowOpened() {
-		setTitle("ImageToPdf");
-		Toolkit tk = Toolkit.getDefaultToolkit();
-		Dimension d = tk.getScreenSize();
-		// int screenHeight = d.height;
-		// int screenWidth = d.width;
-
-		setPreferredSize(new Dimension(screenWidth, screenHeight));
-		setSize(new Dimension(screenWidth, screenHeight));
-
-		pData.setPreferredSize(
-				new Dimension((int) (getPreferredSize().width - 5), (int) (getPreferredSize().height - 5)));
-		pData.setSize(new Dimension((int) (getPreferredSize().width - 5), (int) (getPreferredSize().height - 5)));
-		// pData.setBounds(new Rectangle(5, 5, 934, 553));
-
-		// jLabelBackground.setSize(pData.getSize());
-		// jLabelBackground.setLocation(0, 0);
-	}
-
-	public AssinadorCMJ() {
-		super();
-		initialize();
-	}
-
-	public static void showMessage(String info, String title, int tipo) {
-		javax.swing.JDialog f = new javax.swing.JDialog();
-		f.setSize(220, 150);
-		javax.swing.JOptionPane.showMessageDialog(f, info, title, tipo);
-	}
-
-	/**
-	 * @param args
-	 */
-	public static void main(String[] args) {
-
-		SwingUtilities.invokeLater(new Runnable() {
-			public void run() {
-				AssinadorCMJ thisClass = new AssinadorCMJ();
-				thisClass.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-				thisClass.setVisible(true);
-				AssinadorCMJ.leftTop(thisClass);
-			}
-		});
-	}
-
-	public static void center(Component componente) {
-		// Centraliza a janela de abertura no centro do desktop.
-		Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
-		Rectangle r = componente.getBounds();
-		// Dimensões da janela
-		int widthSplash = r.width;
-		int heightSplash = r.height;
-
-		// calculo para encontrar as cooredenadas X e Y para a centralização da
-		// janela.
-		int posX = (screen.width / 2) - (widthSplash / 2);
-		int posY = (screen.height / 2) - (heightSplash / 2);
-
-		componente.setBounds(posX, posY, widthSplash, heightSplash);
-	}
-
-	public static void leftTop(Component componente) {
-		// Centraliza a janela de abertura no centro do desktop.
-		Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
-		Rectangle r = componente.getBounds();
-		// Dimensões da janela
-		int widthSplash = r.width;
-		int heightSplash = r.height;
-
-		// calculo para encontrar as cooredenadas X e Y para a centralização da
-		// janela.
-		int posX = 100;// (screen.width / 2) - ( widthSplash / 2 );
-		int posY = 100;// (screen.height / 2) - ( heightSplash / 2 );
-
-		componente.setBounds(posX, posY, widthSplash, heightSplash);
 	}
 }
