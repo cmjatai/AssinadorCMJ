@@ -1,6 +1,5 @@
 package br.leg.go.jatai.assinadorcmj;
 
-import java.awt.AlphaComposite;
 import java.awt.BorderLayout;
 import java.awt.Color;
 import java.awt.Component;
@@ -16,31 +15,20 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowStateListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.net.MalformedURLException;
+import java.io.OutputStream;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.GregorianCalendar;
-import java.util.Iterator;
 import java.util.concurrent.CountDownLatch;
 
-import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
-import javax.imageio.ImageWriteParam;
-import javax.imageio.ImageWriter;
-import javax.imageio.stream.FileImageOutputStream;
 import javax.swing.BorderFactory;
-import javax.swing.DefaultListCellRenderer;
-import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
@@ -54,30 +42,26 @@ import javax.swing.JSpinner.DefaultEditor;
 import javax.swing.ListModel;
 import javax.swing.ListSelectionModel;
 import javax.swing.SpinnerNumberModel;
-import javax.swing.SwingConstants;
 import javax.swing.SwingUtilities;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 import javax.swing.event.ListDataListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
-import javax.swing.event.MouseInputListener;
-
-import org.w3c.dom.events.MouseEvent;
 
 import com.itextpdf.io.image.ImageData;
 import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.io.source.ByteArrayOutputStream;
 import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfAConformanceLevel;
+import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfOutputIntent;
-import com.itextpdf.kernel.pdf.PdfPage;
 import com.itextpdf.kernel.pdf.PdfReader;
 import com.itextpdf.kernel.pdf.PdfWriter;
 import com.itextpdf.layout.Document;
+import com.itextpdf.layout.element.Image;
 import com.itextpdf.pdfa.PdfADocument;
 
-import imageUtil.Image;
 import imageUtil.ImageLoader;
 
 public class AssinadorCMJ extends JFrame {
@@ -88,7 +72,7 @@ public class AssinadorCMJ extends JFrame {
 	private static final long serialVersionUID = 532280064802860134L;
 
 	int screenHeight = 650;
-	int screenWidth = 960;
+	int screenWidth = 1024;
 
 	private JPanel jContentPane = null;
 	private JPanel pData = null;
@@ -152,8 +136,8 @@ public class AssinadorCMJ extends JFrame {
 		int widthSplash = r.width;
 		int heightSplash = r.height;
 
-		int posX = 100;
-		int posY = 100;
+		int posX = 50;
+		int posY = 50;
 
 		componente.setBounds(posX, posY, widthSplash, heightSplash);
 	}
@@ -210,7 +194,7 @@ public class AssinadorCMJ extends JFrame {
 	}
 
 	protected void onWindowOpened() {
-		setTitle("Assinador CMJ");
+		setTitle("Assinador CMJ - a parte de assinatura digital ainda está em construção.");
 		Toolkit tk = Toolkit.getDefaultToolkit();
 		Dimension d = tk.getScreenSize();
 
@@ -283,7 +267,6 @@ public class AssinadorCMJ extends JFrame {
 		btnCreatePDF.setMargin(new Insets(0, 0, 0, 0));
 
 		btnCreatePDF.addActionListener(new ActionListener() {
-
 			@Override
 			public void actionPerformed(ActionEvent e) {
 				actionBtnCreatePDF();
@@ -293,14 +276,13 @@ public class AssinadorCMJ extends JFrame {
 		return btnCreatePDF;
 	}
 
-	public static long midiaToEscala(String midia, int escala, float quality) throws IOException {
-		Image image = ImageLoader.fromFile(midia);
+	public static long midiaToEscala(String midia, float escala, float quality) throws IOException {
+		imageUtil.Image image = ImageLoader.fromFile(midia);
 
-		if (image.getWidth() < escala)
-			escala = (int) (image.getWidth() * 0.95);
+		int width = (int) (image.getWidth() * escala);
 
 		String newFile = midia + ".jpg";
-		image.getResizedToWidth(escala).soften(0.08f).writeToJPG(new File(newFile), quality);
+		image.getResizedToWidth(width).soften(0.08f).writeToJPG(new File(newFile), quality);
 
 		return 0;
 	}
@@ -317,58 +299,61 @@ public class AssinadorCMJ extends JFrame {
 		int rVal = d.showSaveDialog(this);
 
 		String nameFile = "/tmp/file_" + (new GregorianCalendar().getTimeInMillis()) + ".pdf";
-		f = null;
 		if (rVal == JFileChooser.APPROVE_OPTION) {
 			nameFile = d.getSelectedFile().getAbsolutePath();
 		} else if (rVal == JFileChooser.CANCEL_OPTION) {
 			return;
 		}
 
-		try {
-			createPDF(nameFile);
-		} catch (Exception e) {
-			jLabelMessage.setText("Não foi possível gerar o arquivo!");
-			e.printStackTrace();
-		}
+		final String selectedNameFile = nameFile;
+		
+		jLabelMessage.setText("Gerando Arquivo...");
+		new Thread(new Runnable() {				
+			
+			@Override
+			public void run() {
+				try {
+					createPDF(selectedNameFile);
+				} catch (Exception e) {
+					jLabelMessage.setText("Não foi possível gerar o arquivo!");
+					e.printStackTrace();
+				}
+			}
+		}).start();
 	}
 
 
-	private void createPDF(String outputNameFile) throws Exception {
+	private void mergePDF(String outputNameFile) throws Exception {
+		PdfWriter writer = new PdfWriter(outputNameFile);
+		PdfDocument pdf = new PdfDocument(writer);
 
-		if (files.length == 0)
-			return;
-
-		if (files[0].getAbsolutePath().endsWith(".pdf")) {
-			mergePDF(outputNameFile);
-			return;
-		}
-
-		int max_size = (int) maxSizeFileOutput.getValue();
-		if (max_size == 0) {
-			constructPDF(outputNameFile, 0);
-			return;
-		}
-
-		final java.util.List<File> ls = Collections.synchronizedList(new ArrayList<File>());
-
-		long size = 0;
+		Document document = new Document(pdf);
+		document.setMargins(0, 0, 0, 0);
 
 		for (int i = 0; i < files.length; i++) {
-			File ff = new File(files[i].getAbsolutePath());
-			size += ff.length();
-		}		
 
+			if (images[i] == null) {
+				PdfReader reader = new PdfReader(files[i]);
+				PdfDocument pdfLoad = new PdfDocument(reader);
+				pdfLoad.copyPagesTo(1, pdfLoad.getNumberOfPages(), pdf);
+				//pdfLoad.close();
+			} else {
+				BufferedImage buf = images[i];
+				pdf.addNewPage(buf.getHeight() > buf.getWidth() ? PageSize.A4 : PageSize.A4.rotate());
+				Image pdfImg = getITextImageByBuf(buf);
+				document.add(pdfImg);
+			}
+		}
+		document.close();
+		pdf.close();
 
+		jLabelMessage.setText("Arquivo Gerado com sucesso no formato PDF.");
 	}
-	private void mergePDF(String outputNameFile) {
-		// TODO Auto-generated method stub
 
-	}
-
-	private void constructPDF(String outputNameFile, int escala) throws Exception {
-
+	private void mergePDFa(String outputNameFile) throws Exception {
+		PdfWriter writer = new PdfWriter(outputNameFile);
 		InputStream inputStream = this.getClass().getResourceAsStream("/sRGB_CS_profile.icm");
-		PdfADocument pdf = new PdfADocument(new PdfWriter(outputNameFile), PdfAConformanceLevel.PDF_A_1B,
+		PdfADocument pdf = new PdfADocument(writer, PdfAConformanceLevel.PDF_A_1B,
 				new PdfOutputIntent("Custom", "", "http://www.color.org", "sRGB IEC61966-2.1", inputStream));
 
 		Document document = new Document(pdf);
@@ -376,40 +361,234 @@ public class AssinadorCMJ extends JFrame {
 
 		for (int i = 0; i < files.length; i++) {
 
-			BufferedImage buf = getBufferedImageByIndice(i);
-			if (i + 1 < files.length)
+			if (images[i] == null) {
+				PdfReader reader = new PdfReader(files[i]);
+				PdfDocument pdfLoad = new PdfDocument(reader);
+				pdfLoad.copyPagesTo(1, pdfLoad.getNumberOfPages(), pdf);
+				//pdfLoad.close();
+			} else {
+				BufferedImage buf = images[i];
 				pdf.addNewPage(buf.getHeight() > buf.getWidth() ? PageSize.A4 : PageSize.A4.rotate());
-
-			//String path = files[i].getAbsolutePath() + (escala == 0 ? "" : ".jpg");
-
-			ByteArrayOutputStream baos = new ByteArrayOutputStream();
-			ImageIO.write( buf, "jpg", baos );
-			baos.flush();
-			byte[] imageInByte = baos.toByteArray();
-			baos.close();
-
-			ImageData imageData = ImageDataFactory.create(imageInByte);
-			com.itextpdf.layout.element.Image pdfImg = new com.itextpdf.layout.element.Image(imageData);
-
-			if (buf.getHeight() > buf.getWidth())
-				pdfImg.scaleAbsolute(595, 842);	
-			else 
-				pdfImg.scaleAbsolute(842, 595);
-
-			document.add(pdfImg);
-
-			if (escala != 0) {
-				File fdel = new File(files[i].getAbsolutePath() + ".jpg");
-				if (fdel.exists())
-					fdel.delete();
+				Image pdfImg = getITextImageByBuf(buf);
+				document.add(pdfImg);
 			}
-
 		}
 		document.close();
 		pdf.close();
 
-		jLabelMessage.setText("Arquivo Gerado com sucesso!");
+		jLabelMessage.setText("Arquivo Gerado com sucesso no formato PDF/A-1B.");
+	}
 
+	private void constructPDF(String outputNameFile, int escala) throws Exception {
+		PdfWriter writer = null;
+		/*
+		 * ByteArrayOutputStream bOut = new ByteArrayOutputStream(); if (outputNameFile
+		 * == null) writer = new PdfWriter(bOut);
+		 * 
+		 */		writer = new PdfWriter(outputNameFile);
+
+
+		 InputStream inputStream = this.getClass().getResourceAsStream("/sRGB_CS_profile.icm");
+		 PdfADocument pdf = new PdfADocument(writer, PdfAConformanceLevel.PDF_A_1B,
+				 new PdfOutputIntent("Custom", "", "http://www.color.org", "sRGB IEC61966-2.1", inputStream));
+
+		 Document document = new Document(pdf);
+		 document.setMargins(0, 0, 0, 0);
+
+		 for (int i = 0; i < files.length; i++) {			 
+			 BufferedImage buf = null;
+			 if (escala == 0) {
+				 buf = getBufferedImageByIndice(i);
+			 }
+			 else {
+				 buf = getBufferedImageByPath(files[i].getAbsolutePath() + ".jpg");
+				 buf = rotateBufferedImage(i, buf);
+			 }
+			 pdf.addNewPage(buf.getHeight() > buf.getWidth() ? PageSize.A4 : PageSize.A4.rotate());
+			 Image pdfImg = getITextImageByBuf(buf);
+			 document.add(pdfImg);		 
+
+			 if (escala != 0) {
+				 File fdel = new File(files[i].getAbsolutePath() + ".jpg");
+				 if (fdel.exists())
+					 fdel.delete();
+			 }
+		 }
+		 document.close();
+		 pdf.close();
+
+		 jLabelMessage.setText("Arquivo Gerado com sucesso no formato PDF/A-1B.");
+
+	}
+
+	private void createPDF(String outputNameFile) throws Exception {
+		if (files.length == 0)
+			return;
+		boolean executeMerge = false;
+		for (int i = 0; i < files.length; i++) {
+			if (getBufferedImageByIndice(i) == null) {
+				executeMerge = true;
+			}
+		}	
+
+		if (executeMerge) {
+			try {
+				mergePDFa(outputNameFile);
+			} catch (Exception e) {
+				mergePDF(outputNameFile);
+			}
+			return;
+		}
+
+		
+		jLabelMessage.setText("A redução das imagens pode demorar alguns minutos. Aguarde processamento!");
+		new Thread(new Runnable() {
+			
+			@Override
+			public void run() {
+
+				int max_size = (int) maxSizeFileOutput.getValue() * 1024 * 1024;
+				if (max_size == 0) {
+					try {
+						constructPDF(outputNameFile, 0);
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+						jLabelMessage.setText("Não foi possível gerar o arquivo!");
+					}
+					return;
+				}
+
+				long size = 0;
+
+				for (int i = 0; i < files.length; i++) {
+					File ff = new File(files[i].getAbsolutePath());
+					size += ff.length();
+				}
+
+				if (size < max_size) {
+					try {
+						constructPDF(outputNameFile, 0);
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+						jLabelMessage.setText("Não foi possível gerar o arquivo!");
+
+					}
+					return;
+				}
+
+				final java.util.List<File> ls = Collections.synchronizedList(new ArrayList<File>());
+
+				//float quality = ((float)(max_size - size) / size + 1); // * 1.1f;		
+				//float escala = 0.99f;
+
+				float quality = 0.8f; // * 1.1f;		
+				float escala = (1 + (float)(max_size - size) / size /2);
+
+				float min_escala = 0.7f;
+				float min_quality = 0.4f;
+				float min_min_quality = 0.3f;
+				while (true) {
+					final float th_escala = escala;
+					final float th_quality = quality;
+
+					for (int i = 0; i < files.length; i++) {
+						ls.add(files[i]);
+					}
+					final CountDownLatch latch = new CountDownLatch(9);
+
+					Runnable run = new Runnable() {
+						@Override
+						public void run() {
+							File fff;
+							while (!ls.isEmpty()) {
+								synchronized (ls) {
+									if (!ls.isEmpty()) {
+										fff = ls.remove(0);
+									} else
+										fff = null;
+								}
+
+								if (fff != null) {
+									try {
+										//System.out.println(fff.getName() + " - " + th_escala + " - " + th_quality);
+										midiaToEscala(fff.getAbsolutePath(), th_escala, th_quality);
+									} catch (IOException e) {
+										// TODO Auto-generated catch block
+										e.printStackTrace();
+									}
+								}
+							}
+							latch.countDown();
+						}
+					};
+
+					for (int n = 0; n < 9; n++) {
+						new Thread(run).start();
+					}
+					try {
+						latch.await();
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+						jLabelMessage.setText("Não foi possível gerar o arquivo!");
+
+						return;
+					}
+
+					size = 0;
+					for (int i = 0; i < files.length; i++) {
+						File ff = new File(files[i].getAbsolutePath() + ".jpg");
+						size += ff.length();
+					}
+					System.out.println("=======size:" + String.valueOf(size) + " escala:" + String.valueOf(escala)
+					+ "  quality:" + String.valueOf(quality));			
+					if (size > max_size) {
+						for (int i = 0; i < files.length; i++) {
+							File fdel = new File(files[i].getAbsolutePath() + ".jpg");
+							fdel.delete();
+						}
+						if (escala > min_escala) {
+							escala *= 0.95;
+							continue;
+						} else {
+							quality *= 0.95;
+							continue;
+						}
+					}
+					try {
+						constructPDF(outputNameFile, 1);
+					} catch (Exception e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+						jLabelMessage.setText("Não foi possível gerar o arquivo!");
+
+					}
+					return;
+				}
+
+			}
+		}).start();
+
+
+	}
+
+	private Image getITextImageByBuf(BufferedImage buf) throws IOException {
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		ImageIO.write( buf, "jpg", baos );
+		baos.flush();
+		byte[] imageInByte = baos.toByteArray();
+		baos.close();
+
+		ImageData imageData = ImageDataFactory.create(imageInByte);
+		Image pdfImg = new Image(imageData);
+
+		if (buf.getHeight() > buf.getWidth())
+			pdfImg.scaleAbsolute(595, 842);	
+		else 
+			pdfImg.scaleAbsolute(842, 595);
+		return pdfImg;
 	}
 
 	private void createPDFOld(String nameFile) {
@@ -433,7 +612,7 @@ public class AssinadorCMJ extends JFrame {
 		}
 		escala = (int) (min_escala + escala * (max_size / (float) size));
 
-		Image image = null;
+		imageUtil.Image image = null;
 		try {
 			image = ImageLoader.fromFile(files[0].getAbsolutePath());
 		} catch (IOException e1) {
@@ -451,7 +630,6 @@ public class AssinadorCMJ extends JFrame {
 			while (true) {
 
 				try {
-
 					midiaToEscala(files[0].getAbsolutePath(), escala, quality);
 				} catch (IOException e) {
 					break;
@@ -637,9 +815,9 @@ public class AssinadorCMJ extends JFrame {
 
 		maxSizeFileOutput.setLocation(485, 30);
 		maxSizeFileOutput.setSize(100, 22);
-		DefaultEditor edit = (DefaultEditor) maxSizeFileOutput.getEditor();
-		edit.getTextField().setEditable(false);
-		maxSizeFileOutput.setModel(new SpinnerNumberModel(0, 0, 0, 0));
+		//DefaultEditor edit = (DefaultEditor) maxSizeFileOutput.getEditor();
+		//edit.getTextField().setEditable(false);
+		//maxSizeFileOutput.setModel(new SpinnerNumberModel(0, 0, 0, 0));
 
 		labelMax1 = new JLabel("TODO: Limitar tamanho do PDF em MB");
 		labelMax1.setFont(new Font("Dialog", Font.BOLD, 11));
@@ -698,12 +876,10 @@ public class AssinadorCMJ extends JFrame {
 			g.setColor(new Color(200, 200, 200));
 			g.fillRect(1, 1, panelImage.getWidth() - 3 , panelImage.getHeight() - 2);
 			if (ii == null) {
-
 				btnGirarImagem.setVisible(false);
 				maxSizeFileOutput.setVisible(false);
 				labelMax1.setVisible(false);
 				labelMax2.setVisible(false);
-				
 				return;
 			}
 
@@ -842,6 +1018,16 @@ public class AssinadorCMJ extends JFrame {
 		return src;
 	}
 
+	protected BufferedImage getBufferedImageByPath(String path) {
+		try {
+			return ImageIO.read(new File(path));
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+			return null;
+		}
+	}
+
 	private void actionBtnGiraIamgem() {
 
 		int[] _idxFilesSelecteds = listFiles.getSelectedIndices();
@@ -851,45 +1037,50 @@ public class AssinadorCMJ extends JFrame {
 			BufferedImage src = getBufferedImageByIndice(i);
 
 			if (src == null) {
-
+				return;
 			}
 
 			rotates[i] = (rotates[i] + 1) % 4;
 
-			int width = 0;
-			int height = 0;
-
-			BufferedImage dest = null;
-
-			if (rotates[i] == 1 || rotates[i] == 3) {
-				height = src.getWidth();
-				width = src.getHeight();
-			} else {
-				width = src.getWidth();
-				height = src.getHeight();
-			}
-			dest = new BufferedImage(width, height, src.getType());
-
-			Graphics2D graphics2D = dest.createGraphics();
-			RenderingHints rh = new RenderingHints(
-					RenderingHints.KEY_RENDERING,
-					RenderingHints.VALUE_RENDER_QUALITY);
-			graphics2D.setRenderingHints(rh);
-
-			if (rotates[i] == 1 || rotates[i]==3) {
-				graphics2D.translate(rotates[i] == 1 ? width : 0, rotates[i] == 3 ? height : 0);
-				width = 0;
-				height = 0;
-			}
-			graphics2D.rotate(Math.toRadians(rotate[rotates[i]]), width / 2, height / 2);	
-
-
-			graphics2D.drawRenderedImage(src, null);
-			graphics2D.dispose();
+			BufferedImage dest = rotateBufferedImage(i, src);
 			images[i] = dest;
 		}
 		renderImageSelected();
 
+	}
+
+	private BufferedImage rotateBufferedImage(int i, BufferedImage src) {
+		int width = 0;
+		int height = 0;
+
+		BufferedImage dest = null;
+
+		if (rotates[i] == 1 || rotates[i] == 3) {
+			height = src.getWidth();
+			width = src.getHeight();
+		} else {
+			width = src.getWidth();
+			height = src.getHeight();
+		}
+		dest = new BufferedImage(width, height, src.getType());
+
+		Graphics2D graphics2D = dest.createGraphics();
+		RenderingHints rh = new RenderingHints(
+				RenderingHints.KEY_RENDERING,
+				RenderingHints.VALUE_RENDER_QUALITY);
+		graphics2D.setRenderingHints(rh);
+
+		if (rotates[i] == 1 || rotates[i]==3) {
+			graphics2D.translate(rotates[i] == 1 ? width : 0, rotates[i] == 3 ? height : 0);
+			width = 0;
+			height = 0;
+		}
+		graphics2D.rotate(Math.toRadians(rotate[rotates[i]]), width / 2, height / 2);	
+
+
+		graphics2D.drawRenderedImage(src, null);
+		graphics2D.dispose();
+		return dest;
 	}
 
 	protected void actionBtnSelectFile() {
@@ -927,6 +1118,23 @@ public class AssinadorCMJ extends JFrame {
 				rotates[i] = 0;
 				//images[i] = ImageIO.read(files[i]);
 			}
+			Runnable run = new Runnable() {
+				@Override
+				public void run() {
+					for (int i = 0; i < files.length; i++) {
+						if (getBufferedImageByIndice(i) == null) {
+							btnGirarImagem.setVisible(false);
+							maxSizeFileOutput.setVisible(false);
+							labelMax1.setVisible(false);
+							labelMax2.setVisible(false);
+							break;
+						}
+					}
+				}
+			};
+
+			Thread t = new Thread(run);
+			t.start();
 
 			updateListFiles();
 
@@ -1006,7 +1214,6 @@ public class AssinadorCMJ extends JFrame {
 					 @Override
 					 public void addListDataListener(ListDataListener arg0) {
 						 // TODO Auto-generated method stub
-
 					 }
 				 });
 			 }
@@ -1016,7 +1223,7 @@ public class AssinadorCMJ extends JFrame {
 		jLabelMessage = new JLabel();
 		jLabelMessage.setFont(new Font("Dialog", Font.BOLD, 14));
 		jLabelMessage.setLocation(374, 0);
-		jLabelMessage.setSize(400, 30);
+		jLabelMessage.setSize(1000, 30);
 		return jLabelMessage;
 	}
 }
