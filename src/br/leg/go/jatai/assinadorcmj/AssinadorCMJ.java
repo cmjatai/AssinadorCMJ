@@ -22,6 +22,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.URISyntaxException;
+import java.net.URLDecoder;
+import java.security.CodeSource;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.GregorianCalendar;
@@ -105,8 +108,19 @@ public class AssinadorCMJ extends JFrame {
 
 	/**
 	 * @param args
+	 * @throws URISyntaxException 
+	 * @throws IOException 
 	 */
-	public static void main(String[] args) {
+	public static void main(String[] args) throws URISyntaxException, IOException {
+		
+		/*
+		 * CodeSource codeSource =
+		 * AssinadorCMJ.class.getProtectionDomain().getCodeSource(); String path =
+		 * codeSource.getLocation().getPath(); if(args.length==0 &&
+		 * Runtime.getRuntime().maxMemory()/1024/1024<15360) { String command =
+		 * "java -Xmx2048m -jar \""+path+"AssinadorCMJ.jar\" restart";
+		 * System.out.println(command); Runtime.getRuntime().exec(command); return; }
+		 */
 
 		SwingUtilities.invokeLater(new Runnable() {
 			public void run() {
@@ -244,7 +258,6 @@ public class AssinadorCMJ extends JFrame {
 
 			panelImage.setBackground(Color.WHITE);
 			panelImage.setBorder(BorderFactory.createEtchedBorder());
-
 
 			panelImage.addComponentListener(new ComponentAdapter() {
 				public void componentResized(ComponentEvent e) {
@@ -440,8 +453,11 @@ public class AssinadorCMJ extends JFrame {
 			return;
 		}
 
+		int amax_size = (int) maxSizeFileOutput.getValue() * 1024 * 1024;
 		
-		jLabelMessage.setText("A redução das imagens pode demorar alguns minutos. Aguarde processamento!");
+		if (amax_size != 0) {
+			jLabelMessage.setText("A redução das imagens pode demorar alguns minutos. Aguarde processamento!");
+		}
 		new Thread(new Runnable() {
 			
 			@Override
@@ -486,7 +502,7 @@ public class AssinadorCMJ extends JFrame {
 				float quality = 0.8f; // * 1.1f;		
 				float escala = (1 + (float)(max_size - size) / size /2);
 
-				float min_escala = 0.7f;
+				float min_escala = 0.4f;
 				float min_quality = 0.4f;
 				float min_min_quality = 0.3f;
 				while (true) {
@@ -955,8 +971,6 @@ public class AssinadorCMJ extends JFrame {
 			g.drawImage(ii, drawLocationX, drawLocationY, w, h ,null);
 		}
 	}
-
-
 
 	private JButton getButtonSelectFile() {
 
