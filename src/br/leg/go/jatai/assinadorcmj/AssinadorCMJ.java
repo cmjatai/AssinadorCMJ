@@ -28,6 +28,7 @@ import java.security.CodeSource;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.GregorianCalendar;
+import java.util.List;
 import java.util.concurrent.CountDownLatch;
 
 import javax.imageio.ImageIO;
@@ -94,9 +95,9 @@ public class AssinadorCMJ extends JFrame {
     private JSpinner maxSizeFileOutput = null;
     private JPanel panelImage = null;
 
-    private File files[] = null;
-    private int rotates[] = null;
-    private BufferedImage[] images = null;
+    private List<File> files = new ArrayList<File>();
+    private List<Integer> rotates = new ArrayList<Integer>();
+    private List<BufferedImage> images = new ArrayList<BufferedImage>();
 
     private int rotate[] = {0, 90, 180, -90};
 
@@ -350,15 +351,15 @@ public class AssinadorCMJ extends JFrame {
         Document document = new Document(pdf);
         document.setMargins(0, 0, 0, 0);
 
-        for (int i = 0; i < files.length; i++) {
+        for (int i = 0; i < files.size(); i++) {
 
-            if (images[i] == null) {
-                PdfReader reader = new PdfReader(files[i]);
+            if (images.get(i) == null) {
+                PdfReader reader = new PdfReader(files.get(i));
                 PdfDocument pdfLoad = new PdfDocument(reader);
                 pdfLoad.copyPagesTo(1, pdfLoad.getNumberOfPages(), pdf);
                 //pdfLoad.close();
             } else {
-                BufferedImage buf = images[i];
+                BufferedImage buf = images.get(i);
                 pdf.addNewPage(buf.getHeight() > buf.getWidth() ? PageSize.A4 : PageSize.A4.rotate());
                 Image pdfImg = getITextImageByBuf(buf);
                 document.add(pdfImg);
@@ -379,15 +380,15 @@ public class AssinadorCMJ extends JFrame {
         Document document = new Document(pdf);
         document.setMargins(0, 0, 0, 0);
 
-        for (int i = 0; i < files.length; i++) {
+        for (int i = 0; i < files.size(); i++) {
 
-            if (images[i] == null) {
-                PdfReader reader = new PdfReader(files[i]);
+            if (images.get(i) == null) {
+                PdfReader reader = new PdfReader(files.get(i));
                 PdfDocument pdfLoad = new PdfDocument(reader);
                 pdfLoad.copyPagesTo(1, pdfLoad.getNumberOfPages(), pdf);
                 //pdfLoad.close();
             } else {
-                BufferedImage buf = images[i];
+                BufferedImage buf = images.get(i);
                 pdf.addNewPage(buf.getHeight() > buf.getWidth() ? PageSize.A4 : PageSize.A4.rotate());
                 Image pdfImg = getITextImageByBuf(buf);
                 document.add(pdfImg);
@@ -415,13 +416,13 @@ public class AssinadorCMJ extends JFrame {
          Document document = new Document(pdf);
          document.setMargins(0, 0, 0, 0);
 
-         for (int i = 0; i < files.length; i++) {             
+         for (int i = 0; i < files.size(); i++) {             
              BufferedImage buf = null;
              if (escala == 0) {
                  buf = getBufferedImageByIndice(i);
              }
              else {
-                 buf = getBufferedImageByPath(files[i].getAbsolutePath() + ".jpg");
+                 buf = getBufferedImageByPath(files.get(i).getAbsolutePath() + ".jpg");
                  buf = rotateBufferedImage(i, buf);
              }
              pdf.addNewPage(buf.getHeight() > buf.getWidth() ? PageSize.A4 : PageSize.A4.rotate());
@@ -429,7 +430,7 @@ public class AssinadorCMJ extends JFrame {
              document.add(pdfImg);         
 
              if (escala != 0) {
-                 File fdel = new File(files[i].getAbsolutePath() + ".jpg");
+                 File fdel = new File(files.get(i).getAbsolutePath() + ".jpg");
                  if (fdel.exists())
                      fdel.delete();
              }
@@ -442,10 +443,10 @@ public class AssinadorCMJ extends JFrame {
     }
 
     private void createPDF(String outputNameFile) throws Exception {
-        if (files.length == 0)
+        if (files.isEmpty())
             return;
         boolean executeMerge = false;
-        for (int i = 0; i < files.length; i++) {
+        for (int i = 0; i < files.size(); i++) {
             if (getBufferedImageByIndice(i) == null) {
                 executeMerge = true;
             }
@@ -484,8 +485,8 @@ public class AssinadorCMJ extends JFrame {
 
                 long size = 0;
 
-                for (int i = 0; i < files.length; i++) {
-                    File ff = new File(files[i].getAbsolutePath());
+                for (int i = 0; i < files.size(); i++) {
+                    File ff = new File(files.get(i).getAbsolutePath());
                     size += ff.length();
                 }
 
@@ -516,8 +517,8 @@ public class AssinadorCMJ extends JFrame {
                     final float th_escala = escala;
                     final float th_quality = quality;
 
-                    for (int i = 0; i < files.length; i++) {
-                        ls.add(files[i]);
+                    for (int i = 0; i < files.size(); i++) {
+                        ls.add(files.get(i));
                     }
                     final CountDownLatch latch = new CountDownLatch(9);
 
@@ -561,15 +562,15 @@ public class AssinadorCMJ extends JFrame {
                     }
 
                     size = 0;
-                    for (int i = 0; i < files.length; i++) {
-                        File ff = new File(files[i].getAbsolutePath() + ".jpg");
+                    for (int i = 0; i < files.size(); i++) {
+                        File ff = new File(files.get(i).getAbsolutePath() + ".jpg");
                         size += ff.length();
                     }
                     System.out.println("=======size:" + String.valueOf(size) + " escala:" + String.valueOf(escala)
                     + "  quality:" + String.valueOf(quality));            
                     if (size > max_size) {
-                        for (int i = 0; i < files.length; i++) {
-                            File fdel = new File(files[i].getAbsolutePath() + ".jpg");
+                        for (int i = 0; i < files.size(); i++) {
+                            File fdel = new File(files.get(i).getAbsolutePath() + ".jpg");
                             fdel.delete();
                         }
                         if (escala > min_escala) {
@@ -629,15 +630,15 @@ public class AssinadorCMJ extends JFrame {
 
         long size = 0;
 
-        for (int i = 0; i < files.length; i++) {
-            File ff = new File(files[i].getAbsolutePath());
+        for (int i = 0; i < files.size(); i++) {
+            File ff = new File(files.get(i).getAbsolutePath());
             size += ff.length();
         }
         escala = (int) (min_escala + escala * (max_size / (float) size));
 
         imageUtil.Image image = null;
         try {
-            image = ImageLoader.fromFile(files[0].getAbsolutePath());
+            image = ImageLoader.fromFile(files.get(0).getAbsolutePath());
         } catch (IOException e1) {
             // TODO Auto-generated catch block
             e1.printStackTrace();
@@ -645,7 +646,7 @@ public class AssinadorCMJ extends JFrame {
         if (image != null && image.getWidth() < escala)
             escala = (int) (image.getWidth() * 0.95);
 
-        long media_base = (long) ((max_size / (float) files.length) * 1.2);
+        long media_base = (long) ((max_size / (float) files.size()) * 1.2);
 
         c = 1;
 
@@ -653,14 +654,14 @@ public class AssinadorCMJ extends JFrame {
             while (true) {
 
                 try {
-                    midiaToEscala(files[0].getAbsolutePath(), escala, quality);
+                    midiaToEscala(files.get(0).getAbsolutePath(), escala, quality);
                 } catch (IOException e) {
                     break;
                 }
 
-                File ff = new File(files[0].getAbsolutePath() + ".jpg");
+                File ff = new File(files.get(0).getAbsolutePath() + ".jpg");
                 long media = ff.length();
-                System.out.println("Cálculo da média em: " + files[0].getName() + " - Escala:" + escala
+                System.out.println("Cálculo da média em: " + files.get(0).getName() + " - Escala:" + escala
                         + " - Qualidade:" + quality + " - Média Base:" + media_base + " - Media Atual:" + media);
 
                 if (media < media_base)
@@ -689,8 +690,8 @@ public class AssinadorCMJ extends JFrame {
                     escala = 0;
                 } else {
 
-                    for (int i = 0; i < files.length; i++) {
-                        ls.add(files[i]);
+                    for (int i = 0; i < files.size(); i++) {
+                        ls.add(files.get(i));
                     }
 
                     final int th_escala = escala;
@@ -731,15 +732,15 @@ public class AssinadorCMJ extends JFrame {
                     latch.await();
 
                     size = 0;
-                    for (int i = 0; i < files.length; i++) {
-                        File ff = new File(files[i].getAbsolutePath() + ".jpg");
+                    for (int i = 0; i < files.size(); i++) {
+                        File ff = new File(files.get(i).getAbsolutePath() + ".jpg");
                         size += ff.length();
                     }
                     System.out.println("=======size:" + String.valueOf(size) + " escala:" + String.valueOf(escala)
                     + "quality:" + String.valueOf(quality));
                     if (size > max_size) {
-                        for (int i = 0; i < files.length; i++) {
-                            File fdel = new File(files[i].getAbsolutePath() + ".jpg");
+                        for (int i = 0; i < files.size(); i++) {
+                            File fdel = new File(files.get(i).getAbsolutePath() + ".jpg");
                             fdel.delete();
                         }
                         if (escala > min_escala) {
@@ -763,17 +764,17 @@ public class AssinadorCMJ extends JFrame {
                 Document document = new Document(pdf, pageSize);
                 document.setMargins(0, 0, 0, 0);
 
-                for (int i = 0; i < files.length; i++) {
+                for (int i = 0; i < files.size(); i++) {
 
-                    if (i + 1 < files.length)
+                    if (i + 1 < files.size())
                         pdf.addNewPage();
 
-                    // if (paisagem[i])
+                    // if (paisagem.get(i))
                     // document.setPageSize(PageSize.A4.rotate());
                     // else
                     // document.setPageSize(PageSize.A4);
 
-                    String path = files[i].getAbsolutePath() + (escala == 0 ? "" : ".jpg");
+                    String path = files.get(i).getAbsolutePath() + (escala == 0 ? "" : ".jpg");
 
                     ImageData imageData = ImageDataFactory.create(path);
                     com.itextpdf.layout.element.Image pdfImg = new com.itextpdf.layout.element.Image(imageData);
@@ -781,7 +782,7 @@ public class AssinadorCMJ extends JFrame {
                     pdfImg.scaleAbsolute(595, 842);
                     document.add(pdfImg);
 
-                    // if (paisagem[i]) {
+                    // if (paisagem.get(i)) {
                     // imPDF.setRotationDegrees(-90);
                     // // imPDF.scaleAbsolute(840,595);
                     // }
@@ -793,7 +794,7 @@ public class AssinadorCMJ extends JFrame {
 
                     // document.add(imPDF);
 
-                    File fdel = new File(files[i].getAbsolutePath() + ".jpg");
+                    File fdel = new File(files.get(i).getAbsolutePath() + ".jpg");
                     fdel.delete();
 
                 }
@@ -1025,11 +1026,11 @@ public class AssinadorCMJ extends JFrame {
     }
 
     protected BufferedImage getBufferedImageByIndice(int i) {
-        BufferedImage src = images[i];
+        BufferedImage src = images.get(i);
         if (src == null) {
             try {
-                src = ImageIO.read(files[i]);
-                images[i] = src;
+                src = ImageIO.read(files.get(i));
+                images.set(i,src);
             } catch (IOException e) {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
@@ -1054,18 +1055,18 @@ public class AssinadorCMJ extends JFrame {
         int[] _idxFilesSelecteds = listFiles.getSelectedIndices();
 
         for (int i: _idxFilesSelecteds) {
-            images[i] = null;
+            images.set(i, null);
             BufferedImage src = getBufferedImageByIndice(i);
 
-            if (src == null) {
+            if (src == null)
                 return;
-            }
 
-            rotates[i] = (rotates[i] + 1) % 4;
-
+            rotates.set(i, new Integer( ((int)rotates.get(i) + 1) % 4  ));
+            
             BufferedImage dest = rotateBufferedImage(i, src);
-            images[i] = dest;
+            images.set(i, dest);
         }
+        
         renderImageSelected();
 
     }
@@ -1076,7 +1077,7 @@ public class AssinadorCMJ extends JFrame {
 
         BufferedImage dest = null;
 
-        if (rotates[i] == 1 || rotates[i] == 3) {
+        if (rotates.get(i) == 1 || rotates.get(i) == 3) {
             height = src.getWidth();
             width = src.getHeight();
         } else {
@@ -1091,12 +1092,12 @@ public class AssinadorCMJ extends JFrame {
                 RenderingHints.VALUE_RENDER_QUALITY);
         graphics2D.setRenderingHints(rh);
 
-        if (rotates[i] == 1 || rotates[i]==3) {
-            graphics2D.translate(rotates[i] == 1 ? width : 0, rotates[i] == 3 ? height : 0);
+        if (rotates.get(i) == 1 || rotates.get(i)==3) {
+            graphics2D.translate(rotates.get(i) == 1 ? width : 0, rotates.get(i) == 3 ? height : 0);
             width = 0;
             height = 0;
         }
-        graphics2D.rotate(Math.toRadians(rotate[rotates[i]]), width / 2, height / 2);    
+        graphics2D.rotate(Math.toRadians(rotate[rotates.get(i)]), width / 2, height / 2);    
 
 
         graphics2D.drawRenderedImage(src, null);
@@ -1121,28 +1122,25 @@ public class AssinadorCMJ extends JFrame {
         int rVal = c.showOpenDialog(this);
 
         if (rVal == JFileChooser.APPROVE_OPTION) {
-
-            files = c.getSelectedFiles();
             
-            path_selected = files[0].getAbsolutePath();
+            File temp_files[] = c.getSelectedFiles();
             
-            rotates = new int[files.length];
-
-            images = new BufferedImage[files.length];            
-
+            for (File file : temp_files) {
+                files.add(file);
+                images.add(null);
+                rotates.add(0);
+            }
+            
+            path_selected = files.get(0).getAbsolutePath();
+            
             btnGirarImagem.setVisible(true);
             maxSizeFileOutput.setVisible(true);
             labelMax1.setVisible(true);
             labelMax2.setVisible(true);
-            for (int i = 0; i < files.length; i++) {
-                images[i] = null;
-                rotates[i] = 0;
-                //images[i] = ImageIO.read(files[i]);
-            }
             Runnable run = new Runnable() {
                 @Override
                 public void run() {
-                    for (int i = 0; i < files.length; i++) {
+                    for (int i = 0; i < files.size(); i++) {
                         if (getBufferedImageByIndice(i) == null) {
                             btnGirarImagem.setVisible(false);
                             maxSizeFileOutput.setVisible(false);
@@ -1182,7 +1180,6 @@ public class AssinadorCMJ extends JFrame {
                 @Override
                 public void removeListDataListener(ListDataListener arg0) {
                     // TODO Auto-generated method stub
-
                 }
 
                 @Override
@@ -1191,12 +1188,12 @@ public class AssinadorCMJ extends JFrame {
                     if (files == null) {
                         return 0;
                     }
-                    return files.length;
+                    return files.size();
                 }
 
                 @Override
                 public String getElementAt(int arg0) {
-                    return files[arg0].getName();
+                    return files.get(arg0).getName();
                 }
 
                 @Override
