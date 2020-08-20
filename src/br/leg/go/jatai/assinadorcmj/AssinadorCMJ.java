@@ -24,6 +24,9 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URISyntaxException;
 import java.net.URLDecoder;
+import java.nio.ByteBuffer;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.security.CodeSource;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -117,15 +120,6 @@ public class AssinadorCMJ extends JFrame {
 
     public static void main(String[] args) throws URISyntaxException, IOException {
 
-        /*
-         * CodeSource codeSource =
-         * AssinadorCMJ.class.getProtectionDomain().getCodeSource(); String path =
-         * codeSource.getLocation().getPath(); if(args.length==0 &&
-         * Runtime.getRuntime().maxMemory()/1024/1024<15360) { String command =
-         * "java -Xmx2048m -jar \""+path+"AssinadorCMJ.jar\" restart";
-         * System.out.println(command); Runtime.getRuntime().exec(command); return; }
-         */
-
         SwingUtilities.invokeLater(new Runnable() {
             public void run() {
                 AssinadorCMJ thisClass = new AssinadorCMJ();
@@ -134,6 +128,34 @@ public class AssinadorCMJ extends JFrame {
                 AssinadorCMJ.leftTop(thisClass);
             }
         });
+    }
+
+    public static void main__dev(String[] args) throws URISyntaxException, IOException {
+
+        
+        System.out.println(System.getProperty("file.encoding"));
+        System.out.println(Charset.defaultCharset().toString());
+        CodeSource codeSource = AssinadorCMJ.class.getProtectionDomain().getCodeSource();
+        ByteBuffer buffer = StandardCharsets.ISO_8859_1.encode(codeSource.getLocation().getPath()); 
+        String utf8EncodedString = StandardCharsets.UTF_8.decode(buffer).toString();
+        System.out.println(utf8EncodedString);
+        
+        String path = new String(codeSource.getLocation().getPath().getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
+        if (args.length==0 && Runtime.getRuntime().maxMemory()/1024/1024 < 15360) {
+            String command = "java -Xmx2048m -jar \""+path+"\" restart";
+            System.out.println(command); 
+            Runtime.getRuntime().exec(command); 
+        }
+        else {
+            SwingUtilities.invokeLater(new Runnable() {
+                public void run() {
+                    AssinadorCMJ thisClass = new AssinadorCMJ();
+                    thisClass.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                    thisClass.setVisible(true);
+                    AssinadorCMJ.leftTop(thisClass);
+                }
+            });
+        }
     }
 
     public static void center(Component componente) {
