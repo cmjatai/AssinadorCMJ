@@ -83,8 +83,9 @@ public class AssinadorCMJ extends JFrame {
 
     private JPanel jContentPane = null;
     private JPanel pData = null;
-
+    
     private JButton btnSelectFile = null;
+    private JButton btnClearListFile = null;
     private JButton btnGirarImagem = null;
     private JButton btnCreatePDF = null;
 
@@ -257,6 +258,7 @@ public class AssinadorCMJ extends JFrame {
             pData.add(getJCheckBoxImageList(), null);
             pData.add(getMaxSizeFileOutput(), null);
             pData.add(getButtonSelectFile(), null);
+            pData.add(getButtonClearListFile(), null);
             pData.add(getPanelImage(), null);
 
             pData.add(getButtonGirarImagemSelecionada(), null);
@@ -274,7 +276,7 @@ public class AssinadorCMJ extends JFrame {
                 @Override
                 protected void paintComponent(Graphics g) {
                     super.paintComponent(g);
-                    renderImageSelected();
+                    renderImageSelected(g);
                 }
             };
             panelImage.setLayout(new BorderLayout());
@@ -900,6 +902,7 @@ public class AssinadorCMJ extends JFrame {
         listFiles = new JList();
         listFiles.setSize(220, pData.getHeight() - 75);
         listFiles.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);
+        //listFiles.setDragEnabled(true);
         listFiles.addListSelectionListener(new ListSelectionListener() {
             @Override
             public void valueChanged(ListSelectionEvent arg0) {
@@ -910,15 +913,30 @@ public class AssinadorCMJ extends JFrame {
         return listFiles;
     }
     private void renderImageSelected() {
+        Graphics2D g = (Graphics2D) panelImage.getGraphics();
+        renderImageSelected(g);
+    }
+    private void renderImageSelected(Graphics g) {
         int[] _idxFilesSelecteds = listFiles.getSelectedIndices();
 
-        if (_idxFilesSelecteds.length == 1) {
+        if (files.isEmpty()) {
+            panelImage.removeAll();
+            g.setColor(new Color(200, 200, 200));
+            g.fillRect(1, 1, panelImage.getWidth() - 3 , panelImage.getHeight() - 2);
+            btnGirarImagem.setVisible(false);
+            maxSizeFileOutput.setVisible(false);
+            labelMax1.setVisible(false);
+            labelMax2.setVisible(false);
+            btnCreatePDF.setVisible(false);
+            btnClearListFile.setVisible(false);
+            
+            
+        } else if (_idxFilesSelecteds.length == 1) {
 
             panelImage.removeAll();
 
             BufferedImage ii = getBufferedImageByIndice(_idxFilesSelecteds[0]);
 
-            Graphics2D g = (Graphics2D) panelImage.getGraphics();
             g.setColor(new Color(200, 200, 200));
             g.fillRect(1, 1, panelImage.getWidth() - 3 , panelImage.getHeight() - 2);
             if (ii == null) {
@@ -933,6 +951,8 @@ public class AssinadorCMJ extends JFrame {
             maxSizeFileOutput.setVisible(true);
             labelMax1.setVisible(true);
             labelMax2.setVisible(true);
+            btnCreatePDF.setVisible(true);
+
 
             double wi = ii.getWidth();
             double hi = ii.getHeight();
@@ -1007,14 +1027,13 @@ public class AssinadorCMJ extends JFrame {
         btnSelectFile = new JButton();
         btnSelectFile.setForeground(new Color(0, 0, 0));
         btnSelectFile.setFont(new Font("Dialog", Font.PLAIN, 12));
-        btnSelectFile.setText("Selecione JPGs ou PDFs");
+        btnSelectFile.setText("Adiciona JPGs ou PDFs");
 
         btnSelectFile.setLocation(7, 7);
-        btnSelectFile.setSize(220, 20);
+        btnSelectFile.setSize(170, 20);
         btnSelectFile.setMargin(new Insets(0, 0, 0, 0));
 
         btnSelectFile.addActionListener(new ActionListener() {
-
             @Override
             public void actionPerformed(ActionEvent e) {
                 jLabelMessage.setText("");
@@ -1023,6 +1042,42 @@ public class AssinadorCMJ extends JFrame {
         });
 
         return btnSelectFile;
+    }
+
+    private JButton getButtonClearListFile() {
+
+        btnClearListFile = new JButton();
+        btnClearListFile.setForeground(new Color(0, 0, 0));
+        btnClearListFile.setFont(new Font("Dialog", Font.PLAIN, 12));
+        btnClearListFile.setText("X");
+        btnClearListFile.setToolTipText("Exclui itens selecionados da lista abaixo!");
+
+        btnClearListFile.setLocation(186, 7);
+        btnClearListFile.setSize(40, 20);
+        btnClearListFile.setMargin(new Insets(0, 0, 0, 0));
+
+        btnClearListFile.addActionListener(new ActionListener() {
+
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                jLabelMessage.setText("");
+                
+                int[] _idxFilesSelecteds = listFiles.getSelectedIndices();
+                int pos = _idxFilesSelecteds[0];
+                for (int i = 0; i < _idxFilesSelecteds.length; i++) {
+                    files.remove(_idxFilesSelecteds[i]);
+                    rotates.remove(_idxFilesSelecteds[i]);
+                    images.remove(_idxFilesSelecteds[i]);                    
+                }
+                updateListFiles();
+                if (pos == files.size())
+                    pos = files.size()-1;
+                listFiles.setSelectedIndex(pos);
+                renderImageSelected();
+            }
+        });
+
+        return btnClearListFile;
     }
 
     private JButton getButtonGirarImagemSelecionada() {
@@ -1159,6 +1214,8 @@ public class AssinadorCMJ extends JFrame {
             maxSizeFileOutput.setVisible(true);
             labelMax1.setVisible(true);
             labelMax2.setVisible(true);
+            btnCreatePDF.setVisible(true);
+            btnClearListFile.setVisible(true);
             Runnable run = new Runnable() {
                 @Override
                 public void run() {
@@ -1180,9 +1237,7 @@ public class AssinadorCMJ extends JFrame {
             updateListFiles();
 
         }
-        if (rVal == JFileChooser.CANCEL_OPTION) {
-            files = null;
-        }
+        
     }
 
     private void updateListFiles() {
