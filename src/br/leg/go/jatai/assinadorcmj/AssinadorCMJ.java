@@ -453,6 +453,7 @@ public class AssinadorCMJ extends JFrame {
             BufferedImage buf = null;
             if (escala == 0) {
                 buf = getBufferedImageByIndice(i);
+                buf = rotateBufferedImage(i, buf);
             }
             else {
                 buf = getBufferedImageByPath(files.get(i).getAbsolutePath() + ".jpg");
@@ -1330,8 +1331,11 @@ public class AssinadorCMJ extends JFrame {
                             maxSizeFileOutput.setVisible(false);
                             labelMax1.setVisible(false);
                             labelMax2.setVisible(false);
+                            break;
                         }
-                        break;
+                        else {
+                            images.set(i, null);
+                        }
                     }
                 }
             };
