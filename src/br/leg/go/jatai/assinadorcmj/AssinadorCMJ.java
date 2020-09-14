@@ -23,6 +23,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URISyntaxException;
+import java.net.URL;
 import java.net.URLDecoder;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -56,6 +57,11 @@ import javax.swing.event.ListDataListener;
 import javax.swing.event.ListSelectionEvent;
 import javax.swing.event.ListSelectionListener;
 
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.ImageType;
+import org.apache.pdfbox.rendering.PDFRenderer;
+
+import com.itextpdf.forms.PdfAcroForm;
 import com.itextpdf.io.image.ImageData;
 import com.itextpdf.io.image.ImageDataFactory;
 import com.itextpdf.io.source.ByteArrayOutputStream;
@@ -63,8 +69,10 @@ import com.itextpdf.kernel.geom.PageSize;
 import com.itextpdf.kernel.pdf.PdfAConformanceLevel;
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfOutputIntent;
+import com.itextpdf.kernel.pdf.PdfPage;
 import com.itextpdf.kernel.pdf.PdfReader;
 import com.itextpdf.kernel.pdf.PdfWriter;
+import com.itextpdf.kernel.pdf.canvas.PdfCanvas;
 import com.itextpdf.layout.Document;
 import com.itextpdf.layout.element.Image;
 import com.itextpdf.pdfa.PdfADocument;
@@ -83,7 +91,7 @@ public class AssinadorCMJ extends JFrame {
 
     private JPanel jContentPane = null;
     private JPanel pData = null;
-    
+
     private JButton btnSelectFile = null;
     private JButton btnClearListFile = null;
     private JButton btnGirarImagem = null;
@@ -95,7 +103,7 @@ public class AssinadorCMJ extends JFrame {
 
     private JScrollPane panelListFiles = null;
     private JList<String> listFiles = null;
-    private JCheckBox chkImageList = null;
+    private JCheckBox chkTimbreCMJ = null;
     private JSpinner maxSizeFileOutput = null;
     private JPanel panelImage = null;
 
@@ -133,14 +141,14 @@ public class AssinadorCMJ extends JFrame {
 
     public static void main__dev(String[] args) throws URISyntaxException, IOException {
 
-        
+
         System.out.println(System.getProperty("file.encoding"));
         System.out.println(Charset.defaultCharset().toString());
         CodeSource codeSource = AssinadorCMJ.class.getProtectionDomain().getCodeSource();
         ByteBuffer buffer = StandardCharsets.ISO_8859_1.encode(codeSource.getLocation().getPath()); 
         String utf8EncodedString = StandardCharsets.UTF_8.decode(buffer).toString();
         System.out.println(utf8EncodedString);
-        
+
         String path = new String(codeSource.getLocation().getPath().getBytes(StandardCharsets.ISO_8859_1), StandardCharsets.UTF_8);
         if (args.length==0 && Runtime.getRuntime().maxMemory()/1024/1024 < 15360) {
             String command = "java -Xmx2048m -jar \""+path+"\" restart";
@@ -224,7 +232,6 @@ public class AssinadorCMJ extends JFrame {
 
     private void listenerResize(ComponentEvent e) {
         pData.setBounds(new Rectangle(2, 2, e.getComponent().getWidth(), e.getComponent().getHeight()));
-        chkImageList.setLocation(5, pData.getHeight() - 70);
         panelListFiles.setSize(220, pData.getHeight() - 75);
 
         if (e instanceof WindowEvent) 
@@ -255,7 +262,7 @@ public class AssinadorCMJ extends JFrame {
             pData.add(getLabelMessage(), null);
 
             pData.add(getButtonCreatePDF(), null);
-            pData.add(getJCheckBoxImageList(), null);
+            pData.add(getJCheckBoxInsertTimbreCMJ(), null);
             pData.add(getMaxSizeFileOutput(), null);
             pData.add(getButtonSelectFile(), null);
             pData.add(getButtonClearListFile(), null);
@@ -263,6 +270,7 @@ public class AssinadorCMJ extends JFrame {
 
             pData.add(getButtonGirarImagemSelecionada(), null);
             pData.add(getJPanelListFiles(), null);
+
 
         }
         return pData;
@@ -430,39 +438,104 @@ public class AssinadorCMJ extends JFrame {
          * ByteArrayOutputStream bOut = new ByteArrayOutputStream(); if (outputNameFile
          * == null) writer = new PdfWriter(bOut);
          * 
-         */        writer = new PdfWriter(outputNameFile);
+         */        
+        writer = new PdfWriter(outputNameFile);
 
 
-         InputStream inputStream = this.getClass().getResourceAsStream("/sRGB_CS_profile.icm");
-         PdfADocument pdf = new PdfADocument(writer, PdfAConformanceLevel.PDF_A_1B,
-                 new PdfOutputIntent("Custom", "", "http://www.color.org", "sRGB IEC61966-2.1", inputStream));
+        InputStream inputStream = this.getClass().getResourceAsStream("/sRGB_CS_profile.icm");
+        PdfADocument pdf = new PdfADocument(writer, PdfAConformanceLevel.PDF_A_1B,
+                new PdfOutputIntent("Custom", "", "http://www.color.org", "sRGB IEC61966-2.1", inputStream));
 
-         Document document = new Document(pdf);
-         document.setMargins(0, 0, 0, 0);
+        Document document = new Document(pdf,  PageSize.A4, true);
+        document.setMargins(0, 0, 0, 0);
 
-         for (int i = 0; i < files.size(); i++) {             
-             BufferedImage buf = null;
-             if (escala == 0) {
-                 buf = getBufferedImageByIndice(i);
-             }
-             else {
-                 buf = getBufferedImageByPath(files.get(i).getAbsolutePath() + ".jpg");
-                 buf = rotateBufferedImage(i, buf);
-             }
-             pdf.addNewPage(buf.getHeight() > buf.getWidth() ? PageSize.A4 : PageSize.A4.rotate());
-             Image pdfImg = getITextImageByBuf(buf);
-             document.add(pdfImg);         
+        for (int i = 0; i < files.size(); i++) {             
+            BufferedImage buf = null;
+            if (escala == 0) {
+                buf = getBufferedImageByIndice(i);
+            }
+            else {
+                buf = getBufferedImageByPath(files.get(i).getAbsolutePath() + ".jpg");
+                buf = rotateBufferedImage(i, buf);
+            }
+            PdfPage page = pdf.addNewPage(buf.getHeight() > buf.getWidth() ? PageSize.A4 : PageSize.A4.rotate());
+            Image pdfImg = getITextImageByBuf(buf);
+            document.add(pdfImg);         
+            page.flush(true);
+            
+            images.set(i, null);
 
-             if (escala != 0) {
-                 File fdel = new File(files.get(i).getAbsolutePath() + ".jpg");
-                 if (fdel.exists())
-                     fdel.delete();
-             }
-         }
-         document.close();
-         pdf.close();
+            if (escala != 0) {
+                File fdel = new File(files.get(i).getAbsolutePath() + ".jpg");
+                if (fdel.exists())
+                    fdel.delete();
+            }
+        }
+        document.close();
+        pdf.close();
 
-         jLabelMessage.setText("Arquivo Gerado com sucesso no formato PDF/A-1B.");
+        if (chkTimbreCMJ.isSelected())
+            addTimbreCMJ(outputNameFile, false);
+
+        jLabelMessage.setText("Arquivo Gerado com sucesso no formato PDF/A-1B.");
+    }
+
+    private void addTimbreCMJ(String outputNameFile, boolean isPdfa) throws IOException {
+
+        URL topo = this.getClass().getResource("/img/timbrado_topo.jpg");
+        URL rodape = this.getClass().getResource("/img/timbrado_rodape.jpg");
+
+        File fIn = new File(outputNameFile);
+        File fOut = new File(outputNameFile+"__timbrado.pdf");
+
+        PdfReader reader = new PdfReader(fIn);
+        PdfWriter writer = new PdfWriter(fOut);
+
+        PdfDocument pdf = null;
+
+        PdfADocument pdfa = null;
+        if (!isPdfa) {
+            pdf = new PdfDocument(reader,writer);
+        }
+        else {
+            InputStream inputStream = this.getClass().getResourceAsStream("/sRGB_CS_profile.icm");
+            pdfa = new PdfADocument(writer, PdfAConformanceLevel.PDF_A_1B,
+                    new PdfOutputIntent("Custom", "", "http://www.color.org", "sRGB IEC61966-2.1", inputStream));
+        }
+
+        com.itextpdf.kernel.geom.Rectangle pageSize;
+        PdfCanvas canvas;
+
+        Document d = new Document(isPdfa?pdfa:pdf);
+        pdf = d.getPdfDocument();
+
+        int n = d.getPdfDocument().getNumberOfPages();
+        for (int i = 1; i <= n; i++) {
+            PdfPage page = d.getPdfDocument().getPage(i);
+            pageSize = page.getPageSize();
+            canvas = new PdfCanvas(page);
+
+            ImageData imgTopo = ImageDataFactory.create(topo);            
+            ImageData imgRodape = ImageDataFactory.create(rodape);
+            canvas.addImage(imgTopo, new com.itextpdf.kernel.geom.Rectangle(0,747,595,95), true);
+            canvas.addImage(imgRodape, new com.itextpdf.kernel.geom.Rectangle(0,0,595,52), true);
+
+            page.flush(true);
+
+        }
+
+        //PdfAcroForm form = PdfAcroForm.getAcroForm(pdf, true);
+        //form.flattenFields();
+
+        d.close();
+        pdf.close();
+
+        //fIn.delete();
+        //fOut.renameTo(new File(outputNameFile));
+
+        //PdfADocument pdf = new PdfADocument(writer, PdfAConformanceLevel.PDF_A_1B,
+        //        new PdfOutputIntent("Custom", "", "http://www.color.org", "sRGB IEC61966-2.1", inputStream));
+
 
     }
 
@@ -473,7 +546,12 @@ public class AssinadorCMJ extends JFrame {
         for (int i = 0; i < files.size(); i++) {
             if (getBufferedImageByIndice(i) == null) {
                 executeMerge = true;
+                break;
             }
+            else {
+                images.set(i, null);
+            }
+            
         }    
 
         if (executeMerge) {
@@ -482,6 +560,10 @@ public class AssinadorCMJ extends JFrame {
             } catch (Exception e) {
                 mergePDF(outputNameFile);
             }
+
+            if (chkTimbreCMJ.isSelected())
+                addTimbreCMJ(outputNameFile, false);
+
             return;
         }
 
@@ -834,26 +916,27 @@ public class AssinadorCMJ extends JFrame {
         jLabelMessage.setText("Arquivo Gerado com sucesso!");
     }
 
-    private JCheckBox getJCheckBoxImageList() {
+    private JCheckBox getJCheckBoxInsertTimbreCMJ() {
 
-        chkImageList = new JCheckBox();
-        chkImageList.setText("Mostrar Imagens na Lista");
+        chkTimbreCMJ = new JCheckBox();
+        chkTimbreCMJ.setText("Adicionar Timbre CMJ");
+        chkTimbreCMJ.setToolTipText("Adiciona papel timbrado após montar pdf.");
 
-        chkImageList.setLocation(5, 530);
-        chkImageList.setSize(220, 22);
+        chkTimbreCMJ.setLocation(7, 30);
+        chkTimbreCMJ.setSize(220, 22);
 
-        chkImageList.setMargin(new Insets(0, 0, 0, 0));
-        chkImageList.setVisible(false);
+        chkTimbreCMJ.setMargin(new Insets(0, 0, 0, 0));
+        //chkTimbreCMJ.setVisible(false);
 
-        chkImageList.addChangeListener(new ChangeListener() {
+        chkTimbreCMJ.addChangeListener(new ChangeListener() {
 
             @Override
             public void stateChanged(ChangeEvent arg0) {
-                updateListFiles();
+                //updateListFiles();
             }
         });
 
-        return chkImageList;
+        return chkTimbreCMJ;
 
     }
 
@@ -888,7 +971,7 @@ public class AssinadorCMJ extends JFrame {
 
         panelListFiles = new JScrollPane(getJListFiles());
 
-        panelListFiles.setLocation(7, 35);
+        panelListFiles.setLocation(7, 55);
         panelListFiles.setSize(220, pData.getHeight() - 75);
 
         panelListFiles.setBackground(new Color(255, 255, 255));
@@ -929,8 +1012,8 @@ public class AssinadorCMJ extends JFrame {
             labelMax2.setVisible(false);
             btnCreatePDF.setVisible(false);
             btnClearListFile.setVisible(false);
-            
-            
+
+
         } else if (_idxFilesSelecteds.length == 1) {
 
             panelImage.removeAll();
@@ -944,7 +1027,15 @@ public class AssinadorCMJ extends JFrame {
                 maxSizeFileOutput.setVisible(false);
                 labelMax1.setVisible(false);
                 labelMax2.setVisible(false);
-                return;
+
+                ii = renderPagePdf(files.get(_idxFilesSelecteds[0]), 0);
+                if (ii == null) {
+                    return;
+                }
+                /*
+                 * int w = ii.getWidth(); int h = ii.getHeight(); g.drawImage(ii, 0, -5000, w, h
+                 * ,null); return;
+                 */
             }
 
             btnGirarImagem.setVisible(true);
@@ -1022,12 +1113,26 @@ public class AssinadorCMJ extends JFrame {
         }
     }
 
+    private BufferedImage renderPagePdf(File file, int page) {
+        PDDocument document;
+        BufferedImage img = null;
+        try {
+            document = PDDocument.load (file);
+            PDFRenderer pdfRenderer = new PDFRenderer (document);
+            img = pdfRenderer.renderImageWithDPI(page, 300, ImageType.RGB);
+            document.close();
+            return img;
+        } catch (IOException e) {
+            return null;
+        }
+    }
+
     private JButton getButtonSelectFile() {
 
         btnSelectFile = new JButton();
         btnSelectFile.setForeground(new Color(0, 0, 0));
         btnSelectFile.setFont(new Font("Dialog", Font.PLAIN, 12));
-        btnSelectFile.setText("Adiciona JPGs ou PDFs");
+        btnSelectFile.setText("Adicionar JPGs ou PDFs");
 
         btnSelectFile.setLocation(7, 7);
         btnSelectFile.setSize(170, 20);
@@ -1061,7 +1166,7 @@ public class AssinadorCMJ extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 jLabelMessage.setText("");
-                
+
                 int[] _idxFilesSelecteds = listFiles.getSelectedIndices();
                 int pos = _idxFilesSelecteds[0];
                 for (int i = 0; i < _idxFilesSelecteds.length; i++) {
@@ -1139,11 +1244,11 @@ public class AssinadorCMJ extends JFrame {
                 return;
 
             rotates.set(i, new Integer( ((int)rotates.get(i) + 1) % 4  ));
-            
+
             BufferedImage dest = rotateBufferedImage(i, src);
             images.set(i, dest);
         }
-        
+
         renderImageSelected();
 
     }
@@ -1199,17 +1304,17 @@ public class AssinadorCMJ extends JFrame {
         int rVal = c.showOpenDialog(this);
 
         if (rVal == JFileChooser.APPROVE_OPTION) {
-            
+
             File temp_files[] = c.getSelectedFiles();
-            
+
             for (File file : temp_files) {
                 files.add(file);
                 images.add(null);
                 rotates.add(0);
             }
-            
+
             path_selected = files.get(0).getAbsolutePath();
-            
+
             btnGirarImagem.setVisible(true);
             maxSizeFileOutput.setVisible(true);
             labelMax1.setVisible(true);
@@ -1225,8 +1330,8 @@ public class AssinadorCMJ extends JFrame {
                             maxSizeFileOutput.setVisible(false);
                             labelMax1.setVisible(false);
                             labelMax2.setVisible(false);
-                            break;
                         }
+                        break;
                     }
                 }
             };
@@ -1236,49 +1341,44 @@ public class AssinadorCMJ extends JFrame {
 
             updateListFiles();
 
+            listFiles.setSelectedIndex(0);
+            renderImageSelected();
+
         }
-        
+
     }
 
     private void updateListFiles() {
 
-        if (chkImageList.isSelected()) {
+        pData.remove(panelListFiles);
+        pData.add(getJPanelListFiles());
 
-            pData.remove(panelListFiles);
-            pData.add(getJPanelListFiles());
+        listFiles.setModel(new ListModel<String>() {
 
-        } else {
+            @Override
+            public void removeListDataListener(ListDataListener arg0) {
+                // TODO Auto-generated method stub
+            }
 
-            pData.remove(panelListFiles);
-            pData.add(getJPanelListFiles());
-
-            listFiles.setModel(new ListModel<String>() {
-
-                @Override
-                public void removeListDataListener(ListDataListener arg0) {
-                    // TODO Auto-generated method stub
+            @Override
+            public int getSize() {
+                // TODO Auto-generated method stub
+                if (files == null) {
+                    return 0;
                 }
+                return files.size();
+            }
 
-                @Override
-                public int getSize() {
-                    // TODO Auto-generated method stub
-                    if (files == null) {
-                        return 0;
-                    }
-                    return files.size();
-                }
+            @Override
+            public String getElementAt(int arg0) {
+                return files.get(arg0).getName();
+            }
 
-                @Override
-                public String getElementAt(int arg0) {
-                    return files.get(arg0).getName();
-                }
-
-                @Override
-                public void addListDataListener(ListDataListener arg0) {
-                    // TODO Auto-generated method stub
-                }
-            });
-        }
+            @Override
+            public void addListDataListener(ListDataListener arg0) {
+                // TODO Auto-generated method stub
+            }
+        });
     }
 
     private JLabel getLabelMessage() {
