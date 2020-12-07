@@ -959,26 +959,19 @@ public class AssinadorCMJ extends JFrame {
         // listFiles.setDragEnabled(true);
         listFiles.addListSelectionListener(new ListSelectionListener() {
             @Override
-            public void valueChanged(ListSelectionEvent arg0) {
-                renderImageSelected();
+            public void valueChanged(ListSelectionEvent e) {
+
+                if (!e.getValueIsAdjusting()) {
+
+                    if (listFiles.getSelectedIndex() != -1) {
+                        renderImageSelected();
+                        
+                    }
+                }
             }
         });
 
         return listFiles;
-    }
-
-    private BufferedImage renderPagePdf(File file, int page) {
-        PDDocument document;
-        BufferedImage img = null;
-        try {
-            document = PDDocument.load(file);
-            PDFRenderer pdfRenderer = new PDFRenderer(document);
-            img = pdfRenderer.renderImageWithDPI(page, 300, ImageType.RGB);
-            document.close();
-            return img;
-        } catch (IOException e) {
-            return null;
-        }
     }
 
     private JButton getButtonSelectFile() {
@@ -1052,12 +1045,15 @@ public class AssinadorCMJ extends JFrame {
                 labelMax1.setVisible(false);
                 labelMax2.setVisible(false);
                 panelImage.renderPdf(files.get(_idxFilesSelecteds[0]));
+                return;
             }
             btnGirarImagem.setVisible(true);
             maxSizeFileOutput.setVisible(true);
             labelMax1.setVisible(true);
             labelMax2.setVisible(true);
             btnCreatePDF.setVisible(true);
+            btnClearListFile.setVisible(true);
+            chkTimbreCMJ.setVisible(true);
 
             panelImage.renderBufferedImage(ii);
             return;
@@ -1070,6 +1066,7 @@ public class AssinadorCMJ extends JFrame {
         labelMax2.setVisible(false);
         btnCreatePDF.setVisible(false);
         btnClearListFile.setVisible(false);
+        chkTimbreCMJ.setVisible(false);
 
     }
 

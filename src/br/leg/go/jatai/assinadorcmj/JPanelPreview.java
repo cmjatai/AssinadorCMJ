@@ -5,20 +5,28 @@ import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import java.awt.Shape;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
 import java.io.File;
+import java.io.IOException;
 
 import javax.swing.BorderFactory;
 import javax.swing.JPanel;
+
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.ImageType;
+import org.apache.pdfbox.rendering.PDFRenderer;
 
 public class JPanelPreview extends JPanel {
 
     AssinadorCMJ main = null;
     BufferedImage lastBuff = null;
     File pdf = null;
+    
+    int pageRender = 0;
 
     public JPanelPreview(AssinadorCMJ _main) {
         super();
@@ -41,18 +49,29 @@ public class JPanelPreview extends JPanel {
 
     @Override
     protected void paintComponent(Graphics g) {
-        //this.setBounds(0, 0,getWidth(), getHeight());
-        //Rectangle r = g.getClipRect();
-        //g.setClip(r.x, r.y, getWidth(), getHeight());
         super.paintComponent(g);
-        //clear();
         renderBufferedImage(g, lastBuff);
     }
 
     public void renderPdf(File _pdf) {
         pdf = _pdf;
         lastBuff = null;
+        
+        renderBufferedImage(renderPagePdf());
+    }
 
+    private BufferedImage renderPagePdf() {
+        PDDocument document;
+        BufferedImage img = null;
+        try {
+            document = PDDocument.load(pdf);
+            PDFRenderer pdfRenderer = new PDFRenderer(document);
+            img = pdfRenderer.renderImage(pageRender, 2, ImageType.RGB);
+            document.close();
+            return img;
+        } catch (IOException e) {
+            return null;
+        }
     }
 
     public void clearBuff() {
@@ -107,6 +126,11 @@ public class JPanelPreview extends JPanel {
 
         int w = ii.getWidth();
         int h = ii.getHeight();
+        
+        //g.drawImage(ii, 0, 0, w, h, null);
+        //if (w > 0)
+        //    return;
+
 
         double wp = 0;
         double hp = 0;
@@ -165,7 +189,8 @@ public class JPanelPreview extends JPanel {
                 }
             }
         }
-
+        ((Graphics2D) g).setRenderingHint(RenderingHints.KEY_INTERPOLATION,
+                RenderingHints.VALUE_INTERPOLATION_BICUBIC);
         g.drawImage(ii, drawLocationX, drawLocationY, w, h, null);
     }
 
